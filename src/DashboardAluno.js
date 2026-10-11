@@ -95,9 +95,6 @@ export default function DashboardAluno() {
   const gorduraAtual = parseFloat(ultimaAval.percentualGordura) || 0;
   const massaMagraAtual = parseFloat(ultimaAval.massaMagra) || 0;
   const vo2Atual = parseFloat(ultimaAval.vo2Max) || 0;
-  const flexaoAtual = parseFloat(ultimaAval.flexaoBraco) || 0;
-  const sentaLevantaAtual = parseFloat(ultimaAval.sentaLevanta) || 0;
-  const pranchaAtual = parseFloat(ultimaAval.prancha) || 0;
   const paAtual = ultimaAval.pa || 'N/A';
   const oximetriaAtual = ultimaAval.oximetria || 'N/A';
 

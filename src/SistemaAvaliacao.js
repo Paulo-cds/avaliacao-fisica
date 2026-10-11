@@ -6,7 +6,6 @@ import {
   addDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
 } from "firebase/firestore";
 import FormularioAvaliacao from "./FormularioAvaliacao";
@@ -79,22 +78,22 @@ export default function SistemaAvaliacao() {
   };
 
   // Salvar Nova Avaliação para o Aluno Selecionado
-  const handleSalvarAvaliacao = async (e) => {
-    e.preventDefault();
-    if (!alunoSelecionado) return alert("Selecione um aluno primeiro!");
+  // const handleSalvarAvaliacao = async (e) => {
+  //   e.preventDefault();
+  //   if (!alunoSelecionado) return alert("Selecione um aluno primeiro!");
 
-    try {
-      await addDoc(collection(db, "avaliacoes"), {
-        clienteId: alunoSelecionado.id,
-        ...avaliacao,
-        criadoEm: serverTimestamp(),
-      });
-      alert("Avaliação salva com sucesso no Firestore!");
-      carregarHistorico(alunoSelecionado.id);
-    } catch (error) {
-      console.error("Erro ao salvar avaliação: ", error);
-    }
-  };
+  //   try {
+  //     await addDoc(collection(db, "avaliacoes"), {
+  //       clienteId: alunoSelecionado.id,
+  //       ...avaliacao,
+  //       criadoEm: serverTimestamp(),
+  //     });
+  //     alert("Avaliação salva com sucesso no Firestore!");
+  //     carregarHistorico(alunoSelecionado.id);
+  //   } catch (error) {
+  //     console.error("Erro ao salvar avaliação: ", error);
+  //   }
+  // };
 
   // Carregar histórico de avaliações de um aluno
   const carregarHistorico = async (clienteId) => {
