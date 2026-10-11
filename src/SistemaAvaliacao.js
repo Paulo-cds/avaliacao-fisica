@@ -9,44 +9,22 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import FormularioAvaliacao from "./FormularioAvaliacao";
-import { Link } from "react-router";
-import { formatarDataBr } from "./index"; // Função para formatar datas no padrão brasileiro
+import { Link } from "react-router-dom";
+import { formatarDataBr } from "./index";
 
 export default function SistemaAvaliacao() {
-  const [aba, setAba] = useState("clientes"); // 'clientes', 'novoCliente', 'novaAvaliacao'
+  const [aba, setAba] = useState("clientes");
   const [clientes, setClientes] = useState([]);
   const [alunoSelecionado, setAlunoSelecionado] = useState(null);
   const [historicoAvaliacoes, setHistoricoAvaliacoes] = useState([]);
-  const [ordemHistorico, setOrdemHistorico] = useState("asc");
+  const [ordemHistorico, setOrdemHistorico] = useState("desc");
 
-  // Estados dos formulários
   const [novoCliente, setNovoCliente] = useState({
     nome: "",
     sexo: "M",
     dataNasc: "",
   });
-  const [avaliacao, setAvaliacao] = useState({
-    dataAval: new Date().toISOString().split("T")[0],
-    peso: "",
-    estatura: "",
-    peitoral: "",
-    axilar: "",
-    triceps: "",
-    subescapular: "",
-    abdominal: "",
-    suprailiaca: "",
-    coxa: "",
-    pa: "",
-    oximetria: "",
-    fcRepouso: "",
-    fcMaxAtg: "",
-    velFinal: "",
-    flexaoBraco: "",
-    sentaLevanta: "",
-    prancha: "",
-  });
 
-  // Carregar lista de clientes ao iniciar
   useEffect(() => {
     carregarClientes();
   }, []);
@@ -60,7 +38,6 @@ export default function SistemaAvaliacao() {
     setClientes(lista);
   };
 
-  // Salvar Novo Cliente
   const handleSalvarCliente = async (e) => {
     e.preventDefault();
     try {
@@ -77,32 +54,16 @@ export default function SistemaAvaliacao() {
     }
   };
 
-  // Salvar Nova Avaliação para o Aluno Selecionado
-  // const handleSalvarAvaliacao = async (e) => {
-  //   e.preventDefault();
-  //   if (!alunoSelecionado) return alert("Selecione um aluno primeiro!");
-
-  //   try {
-  //     await addDoc(collection(db, "avaliacoes"), {
-  //       clienteId: alunoSelecionado.id,
-  //       ...avaliacao,
-  //       criadoEm: serverTimestamp(),
-  //     });
-  //     alert("Avaliação salva com sucesso no Firestore!");
-  //     carregarHistorico(alunoSelecionado.id);
-  //   } catch (error) {
-  //     console.error("Erro ao salvar avaliação: ", error);
-  //   }
-  // };
-
-  // Carregar histórico de avaliações de um aluno
   const carregarHistorico = async (clienteId) => {
     const q = query(
       collection(db, "avaliacoes"),
       where("clienteId", "==", clienteId)
     );
     const querySnapshot = await getDocs(q);
-    const lista = querySnapshot.docs.map((doc) => doc.data());
+    const lista = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data()
+    }));
     setHistoricoAvaliacoes(lista);
     setAba("detalhesAluno");
   };
@@ -110,31 +71,19 @@ export default function SistemaAvaliacao() {
   const historicoOrdenado = [...historicoAvaliacoes].sort((a, b) => {
     const dataA = new Date(a.dataAval);
     const dataB = new Date(b.dataAval);
-    return ordemHistorico === "asc" ? dataA - dataB : dataB - dataA;
+    return ordemHistorico === 'asc' ? dataA - dataB : dataB - dataA;
   });
 
   return (
-    <div
-      style={{
-        maxWidth: "900px",
-        margin: "20px auto",
-        fontFamily: "Segoe UI, sans-serif",
-        padding: "20px",
-      }}
-    >
-      <h1>Painel de Avaliação Física - Personal Trainer</h1>
+    <div style={{ maxWidth: "100%", width: "100%", boxSizing: "border-box", margin: "0 auto", fontFamily: "Segoe UI, sans-serif", padding: "10px" }}>
+      <h1 style={{ fontSize: "1.5rem", color: "#1a365d", textAlign: "center", marginBottom: "15px" }}>Painel de Avaliação Física</h1>
 
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <button
-          onClick={() => setAba("clientes")}
-          style={btnStyle(aba === "clientes")}
-        >
+      {/* Navegação Topo */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "20px", justifyContent: "center" }}>
+        <button onClick={() => setAba("clientes")} style={btnStyle(aba === "clientes")}>
           Meus Clientes
         </button>
-        <button
-          onClick={() => setAba("novoCliente")}
-          style={btnStyle(aba === "novoCliente")}
-        >
+        <button onClick={() => setAba("novoCliente")} style={btnStyle(aba === "novoCliente")}>
           + Cadastrar Aluno
         </button>
       </div>
@@ -142,38 +91,15 @@ export default function SistemaAvaliacao() {
       {/* ABA: LISTA DE CLIENTES */}
       {aba === "clientes" && (
         <div>
-          <h2>Lista de Alunos</h2>
-          <ul style={{ listStyle: "none", padding: 0 }}>
+          <h2 style={{ fontSize: "1.2rem", color: "#2d3748" }}>Lista de Alunos</h2>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
             {clientes.map((c) => (
-              <li
-                key={c.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "12px",
-                  background: "#fff",
-                  marginBottom: "8px",
-                  border: "1px solid #ddd",
-                  borderRadius: "6px",
-                }}
-              >
-                <span>
-                  <strong>{c.nome}</strong> ({c.sexo}) - Nasc: {c.dataNasc}
-                </span>
-                <button
-                  onClick={() => {
-                    setAlunoSelecionado(c);
-                    carregarHistorico(c.id);
-                  }}
-                  style={{
-                    background: "#3182ce",
-                    color: "#fff",
-                    border: "none",
-                    padding: "6px 12px",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
+              <li key={c.id} style={{ display: "flex", flexDirection: "column", sm: { flexDirection: "row" }, justifyContent: "space-between", gap: "10px", padding: "12px", background: "#fff", marginBottom: "10px", border: "1px solid #ddd", borderRadius: "8px" }}>
+                <div>
+                  <strong style={{ fontSize: "1.05rem", color: "#2b6cb0" }}>{c.nome}</strong> 
+                  <span style={{ color: "#666", fontSize: "0.9rem", display: "block" }}>Sexo: {c.sexo} | Nasc: {formatarDataBr(c.dataNasc)}</span>
+                </div>
+                <button onClick={() => { setAlunoSelecionado(c); carregarHistorico(c.id); }} style={{ background: "#3182ce", color: "#fff", border: "none", padding: "10px", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", width: "100%" }}>
                   Ver Histórico / Avaliar
                 </button>
               </li>
@@ -185,144 +111,56 @@ export default function SistemaAvaliacao() {
       {/* ABA: CADASTRAR NOVO CLIENTE */}
       {aba === "novoCliente" && (
         <form onSubmit={handleSalvarCliente} style={formStyle}>
-          <h2>Novo Aluno</h2>
-          <label>Nome Completo:</label>
-          <input
-            type="text"
-            value={novoCliente.nome}
-            onChange={(e) =>
-              setNovoCliente({ ...novoCliente, nome: e.target.value })
-            }
-            required
-            style={inputStyle}
-          />
+          <h2 style={{ fontSize: "1.2rem", color: "#2d3748", marginTop: 0 }}>Novo Aluno</h2>
+          <label style={labelStyle}>Nome Completo:</label>
+          <input type="text" value={novoCliente.nome} onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })} required style={inputStyle} />
 
-          <label>Sexo:</label>
-          <select
-            value={novoCliente.sexo}
-            onChange={(e) =>
-              setNovoCliente({ ...novoCliente, sexo: e.target.value })
-            }
-            style={inputStyle}
-          >
+          <label style={labelStyle}>Sexo:</label>
+          <select value={novoCliente.sexo} onChange={(e) => setNovoCliente({ ...novoCliente, sexo: e.target.value })} style={inputStyle}>
             <option value="M">Masculino</option>
             <option value="F">Feminino</option>
           </select>
 
-          <label>Data de Nascimento:</label>
-          <input
-            type="date"
-            value={novoCliente.dataNasc}
-            onChange={(e) =>
-              setNovoCliente({ ...novoCliente, dataNasc: e.target.value })
-            }
-            required
-            style={inputStyle}
-          />
+          <label style={labelStyle}>Data de Nascimento:</label>
+          <input type="date" value={novoCliente.dataNasc} onChange={(e) => setNovoCliente({ ...novoCliente, dataNasc: e.target.value })} required style={inputStyle} />
 
-          <button type="submit" style={submitBtnStyle}>
-            Salvar Aluno
-          </button>
+          <button type="submit" style={submitBtnStyle}>Salvar Aluno</button>
         </form>
       )}
 
-      {/* ABA: DETALHES E HISTÓRICO DO ALUNO SELECIONADO */}
+      {/* ABA: DETALHES E HISTÓRICO DO ALUNO */}
       {aba === "detalhesAluno" && alunoSelecionado && (
         <div>
-          <button
-            onClick={() => setAba("clientes")}
-            style={{ marginBottom: "15px" }}
-          >
+          <button onClick={() => setAba("clientes")} style={{ marginBottom: "15px", padding: "8px 14px", cursor: "pointer", background: "#edf2f7", border: "1px solid #cbd5e0", borderRadius: "6px", fontWeight: "bold" }}>
             ← Voltar para Clientes
           </button>
-          <h2>Aluno: {alunoSelecionado.nome}</h2>
+          <h2 style={{ fontSize: "1.3rem", color: "#1a365d", wordBreak: "break-word" }}>Aluno: {alunoSelecionado.nome}</h2>
 
-          <div
-            style={{
-              background: "#edf2f7",
-              padding: "15px",
-              borderRadius: "8px",
-              marginBottom: "20px",
-            }}
-          >
-            <FormularioAvaliacao
-              alunoSelecionado={alunoSelecionado}
-              onAvaliacaoSalva={carregarHistorico}
-            />
+          <div style={{ background: "#edf2f7", padding: "10px", borderRadius: "8px", marginBottom: "20px", boxSizing: "border-box" }}>
+            <FormularioAvaliacao alunoSelecionado={alunoSelecionado} onAvaliacaoSalva={() => carregarHistorico(alunoSelecionado.id)} />
           </div>
 
-          <h3>Histórico de Avaliações ({historicoAvaliacoes.length})</h3>
-          {/* BOTÃO PARA ALTERNAR A ORDENAÇÃO DO HISTÓRICO */}
-          <button
-            onClick={() =>
-              setOrdemHistorico(ordemHistorico === "asc" ? "desc" : "asc")
-            }
-            style={{
-              backgroundColor: "#2b6cb0",
-              color: "#fff",
-              border: "none",
-              padding: "6px 12px",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontSize: "13px",
-              fontWeight: "bold",
-            }}
-          >
-            {ordemHistorico === "asc"
-              ? "📅 Mais Antigas Primeiras (Crescente ↑)"
-              : "📅 Mais Recentes Primeiras (Decrescente ↓)"}
-          </button>
-          <div
-            key={alunoSelecionado.id}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "12px",
-              background: "#fff",
-              marginBottom: "8px",
-              border: "1px solid #ddd",
-              borderRadius: "6px",
-            }}
-          >
-            <span>
-              <strong>{alunoSelecionado.nome}</strong> ({alunoSelecionado.sexo})
-            </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "15px" }}>
+            <h3 style={{ fontSize: "1.1rem", margin: 0 }}>Histórico de Avaliações ({historicoAvaliacoes.length})</h3>
 
-            {/* O Link redireciona para a rota dinâmica /aluno/ID_DO_FIREBASE/dashboard */}
-            <Link
-              to={`/aluno/${alunoSelecionado.id}/dashboard`}
-              style={{
-                background: "#3182ce",
-                color: "#fff",
-                padding: "6px 12px",
-                borderRadius: "4px",
-                textDecoration: "none",
-              }}
-            >
-              Ver Dashboard e Gráficos
+            <button onClick={() => setOrdemHistorico(ordemHistorico === 'asc' ? 'desc' : 'asc')} style={{ backgroundColor: '#2b6cb0', color: '#fff', border: 'none', padding: '10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', width: "100%" }}>
+              {ordemHistorico === 'asc' ? '📅 Mais Antigas Primeiras (Crescente ↑)' : '📅 Mais Recentes Primeiras (Decrescente ↓)'}
+            </button>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "#fff", marginBottom: "15px", border: "1px solid #ddd", borderRadius: "8px", gap: "10px" }}>
+            <span style={{ fontSize: "0.9rem" }}><strong>Acesso Rápido:</strong> Gráficos e Evolução</span>
+            <Link to={`/aluno/${alunoSelecionado.id}/dashboard`} style={{ background: "#3182ce", color: "#fff", padding: "8px 12px", borderRadius: "6px", textDecoration: "none", fontSize: "0.9rem", fontWeight: "bold", whiteSpace: "nowrap" }}>
+              Dashboard
             </Link>
           </div>
-          <ul>
+
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
             {historicoOrdenado.map((av) => (
-              <li
-                key={av.id}
-                style={{
-                  padding: "12px",
-                  background: "#fff",
-                  border: "1px solid #ccc",
-                  marginBottom: "8px",
-                  borderRadius: "6px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span>
-                  <strong>Data:</strong> {formatarDataBr(av.dataAval)} |{" "}
-                  <strong>Peso:</strong> {av.peso} kg |{" "}
-                  <strong>Estatura:</strong> {av.estatura} cm |{" "}
-                  <strong>% Gordura:</strong> {av.percentualGordura || "N/A"}%
-                </span>
+              <li key={av.id} style={{ padding: "12px", background: "#fff", border: "1px solid #ccc", marginBottom: "8px", borderRadius: "8px", fontSize: "0.9rem", lineHeight: "1.4" }}>
+                <div><strong>Data:</strong> {formatarDataBr(av.dataAval)}</div>
+                <div><strong>Peso:</strong> {av.peso} kg | <strong>Estatura:</strong> {av.estatura} cm</div>
+                <div><strong>% Gordura:</strong> {av.percentualGordura || 'N/A'}% | <strong>VO2max:</strong> {av.vo2Max || 'N/A'}</div>
               </li>
             ))}
           </ul>
@@ -332,35 +170,50 @@ export default function SistemaAvaliacao() {
   );
 }
 
-// Estilos auxiliares rápidos
 const btnStyle = (active) => ({
-  padding: "10px 20px",
+  padding: "10px 16px",
   background: active ? "#2b6cb0" : "#e2e8f0",
   color: active ? "#fff" : "#333",
   border: "none",
-  borderRadius: "5px",
+  borderRadius: "6px",
   cursor: "pointer",
+  fontWeight: "bold",
+  fontSize: "0.9rem"
 });
+
 const formStyle = {
   background: "#fff",
-  padding: "20px",
+  padding: "15px",
   borderRadius: "8px",
   border: "1px solid #ddd",
   display: "flex",
   flexDirection: "column",
-  gap: "10px",
+  gap: "12px",
 };
+
+const labelStyle = {
+  fontSize: "0.9rem",
+  fontWeight: "600",
+  color: "#4a5568"
+};
+
 const inputStyle = {
-  padding: "8px",
-  borderRadius: "4px",
+  padding: "10px",
+  borderRadius: "6px",
   border: "1px solid #ccc",
+  width: "100%",
+  boxSizing: "border-box",
+  fontSize: "1rem"
 };
+
 const submitBtnStyle = {
   background: "#2ca02c",
   color: "#fff",
-  padding: "10px",
+  padding: "12px",
   border: "none",
-  borderRadius: "4px",
+  borderRadius: "6px",
   cursor: "pointer",
   fontWeight: "bold",
+  fontSize: "1rem",
+  width: "100%"
 };
