@@ -7,6 +7,11 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
     dataAval: new Date().toISOString().split('T')[0],
     peso: '',
     estatura: '',
+    // Circunferências
+    cintura: '',
+    abdomen: '',
+    quadril: '',
+    // 7 Dobras Cutâneas
     peitoral: '',
     axilar: '',
     triceps: '',
@@ -14,11 +19,14 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
     abdominal: '',
     suprailiaca: '',
     coxa: '',
+    // Sinais Vitais
     pa: '',
     oximetria: '',
     fcRepouso: '',
+    // Teste de Esteira
     fcMaxAtg: '',
     velFinal: '',
+    // Força Funcional
     flexaoBraco: '',
     sentaLevanta: '',
     prancha: ''
@@ -39,19 +47,56 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
     return idade;
   };
 
-  // Cálculo do VO2max baseado na velocidade final da esteira (ACSM)
   const calcularVO2Max = (velFinalKmH) => {
     const vel = parseFloat(velFinalKmH) || 0;
     if (vel <= 0) return 0;
-    const velMmin = vel * 16.67; // Converte km/h para m/min
+    const velMmin = vel * 16.67;
     const vo2max = (3.5 * velMmin) + 3.5;
     return parseFloat(vo2max.toFixed(1));
+  };
+
+  // Função para estimar a Gordura Visceral no submit
+  const calcularGorduraVisceral = (sexo, idade, cinturaCm, pesoKg, estaturaCm) => {
+    const cintura = parseFloat(cinturaCm) || 0;
+    const peso = parseFloat(pesoKg) || 0;
+    const estaturaM = (parseFloat(estaturaCm) || 0) / 100;
+
+    if (cintura <= 0 || peso <= 0 || estaturaM <= 0) {
+      return { gorduraVisceralArea: 0, gorduraVisceralNivel: 0, gorduraVisceralClassificacao: 'N/A' };
+    }
+
+    const imc = peso / (estaturaM * estaturaM);
+    let areaVisceral = 0;
+
+    if (sexo === 'M') {
+      areaVisceral = (1.33 * cintura) + (0.33 * idade) + (1.2 * imc) - 110;
+    } else {
+      areaVisceral = (1.15 * cintura) + (0.28 * idade) + (1.0 * imc) - 95;
+    }
+
+    areaVisceral = Math.max(10, parseFloat(areaVisceral.toFixed(1)));
+    const nivelVisceral = Math.round(areaVisceral / 10);
+
+    let classificacao = 'Saudável';
+    if (nivelVisceral >= 10 && nivelVisceral <= 14) {
+      classificacao = 'Atenção (Elevada)';
+    } else if (nivelVisceral >= 15) {
+      classificacao = 'Risco Alto';
+    }
+
+    return {
+      gorduraVisceralArea: areaVisceral,
+      gorduraVisceralNivel: nivelVisceral,
+      gorduraVisceralClassificacao: classificacao
+    };
   };
 
   const calcularResultadosAntropometricos = () => {
     const sexo = alunoSelecionado.sexo || 'M';
     const idade = calcularIdade(alunoSelecionado.dataNasc);
     const pesoKg = parseFloat(avaliacao.peso) || 0;
+    const estaturaCm = parseFloat(avaliacao.estatura) || 0;
+    const cinturaCm = parseFloat(avaliacao.cintura) || 0;
 
     const somaDobras = 
       parseFloat(avaliacao.peitoral || 0) +
@@ -74,6 +119,7 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
     const massaGorda = pesoKg * (percentualGordura / 100);
     const massaMagra = pesoKg - massaGorda;
     const vo2MaxCalculado = calcularVO2Max(avaliacao.velFinal);
+    const dadosVisceral = calcularGorduraVisceral(sexo, idade, cinturaCm, pesoKg, estaturaCm);
 
     return {
       idadeNoMomento: idade,
@@ -82,7 +128,8 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
       percentualGordura: parseFloat(percentualGordura.toFixed(2)),
       massaGorda: parseFloat(massaGorda.toFixed(2)),
       massaMagra: parseFloat(massaMagra.toFixed(2)),
-      vo2Max: vo2MaxCalculado // Salva o VO2max calculado
+      vo2Max: vo2MaxCalculado,
+      ...dadosVisceral // Salva gorduraVisceralArea, gorduraVisceralNivel e gorduraVisceralClassificacao
     };
   };
 
@@ -101,7 +148,7 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
         criadoEm: serverTimestamp()
       });
 
-      alert('Avaliação, cálculos e VO2max salvos com sucesso!');
+      alert('Avaliação completa, percentual de gordura e gordura visceral calculados e salvos com sucesso!');
       setAvaliacao(initialAvaliacaoState);
       if (onAvaliacaoSalva) onAvaliacaoSalva(alunoSelecionado.id);
     } catch (error) {
@@ -117,7 +164,8 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
       <h3 style={{ color: '#2b6cb0', marginTop: 0 }}>Nova Avaliação Física: {alunoSelecionado.nome}</h3>
       
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Bloco 1: Antropometria */}
+        
+        {/* Bloco 1: Medições Básicas */}
         <div>
           <h4 style={{ margin: '0 0 10px 0', color: '#4a5568' }}>1. Dados da Medição</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
@@ -136,9 +184,28 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
           </div>
         </div>
 
-        {/* Bloco 2: Dobras Cutâneas */}
+        {/* Bloco 2: Circunferências */}
         <div>
-          <h4 style={{ margin: '0 0 10px 0', color: '#4a5568' }}>2. Dobras Cutâneas (mm) - Jackson & Pollock</h4>
+          <h4 style={{ margin: '0 0 10px 0', color: '#4a5568' }}>2. Circunferências (cm)</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+            <div>
+              <label style={labelStyle}>Cintura (cm):</label>
+              <input type="number" step="0.1" value={avaliacao.cintura} onChange={e => setAvaliacao({...avaliacao, cintura: e.target.value})} style={inputStyle} placeholder="ex: 85" required />
+            </div>
+            <div>
+              <label style={labelStyle}>Abdômen (cm):</label>
+              <input type="number" step="0.1" value={avaliacao.abdomen} onChange={e => setAvaliacao({...avaliacao, abdomen: e.target.value})} style={inputStyle} placeholder="ex: 90" />
+            </div>
+            <div>
+              <label style={labelStyle}>Quadril (cm):</label>
+              <input type="number" step="0.1" value={avaliacao.quadril} onChange={e => setAvaliacao({...avaliacao, quadril: e.target.value})} style={inputStyle} placeholder="ex: 100" />
+            </div>
+          </div>
+        </div>
+
+        {/* Bloco 3: Dobras Cutâneas */}
+        <div>
+          <h4 style={{ margin: '0 0 10px 0', color: '#4a5568' }}>3. Dobras Cutâneas (mm) - Jackson & Pollock</h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
             {['peitoral', 'axilar', 'triceps', 'subescapular', 'abdominal', 'suprailiaca', 'coxa'].map(dobra => (
               <div key={dobra}>
@@ -149,10 +216,10 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
           </div>
         </div>
 
-        {/* Bloco 3: Sinais Vitais & Esteira */}
+        {/* Bloco 4: Sinais Vitais & Esteira */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           <div>
-            <h4 style={{ margin: '0 0 10px 0', color: '#4a5568' }}>3. Sinais Vitais (Repouso)</h4>
+            <h4 style={{ margin: '0 0 10px 0', color: '#4a5568' }}>4. Sinais Vitais (Repouso)</h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
               <div>
                 <label style={labelStyle}>PA:</label>
@@ -170,7 +237,7 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
           </div>
 
           <div>
-            <h4 style={{ margin: '0 0 10px 0', color: '#4a5568' }}>4. Teste de Esteira</h4>
+            <h4 style={{ margin: '0 0 10px 0', color: '#4a5568' }}>5. Teste de Esteira</h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div>
                 <label style={labelStyle}>FC Máx Atg:</label>
@@ -184,9 +251,9 @@ export default function FormularioAvaliacao({ alunoSelecionado, onAvaliacaoSalva
           </div>
         </div>
 
-        {/* Bloco 4: Força Funcional */}
+        {/* Bloco 5: Força Funcional */}
         <div>
-          <h4 style={{ margin: '0 0 10px 0', color: '#4a5568' }}>5. Testes de Força Funcional</h4>
+          <h4 style={{ margin: '0 0 10px 0', color: '#4a5568' }}>6. Testes de Força Funcional</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
             <div>
               <label style={labelStyle}>Flexão (1 min):</label>

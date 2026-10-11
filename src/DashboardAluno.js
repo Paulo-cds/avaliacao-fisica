@@ -89,7 +89,7 @@ export default function DashboardAluno() {
     );
   }
 
-  // Última avaliação para os KPIs
+  // Dados da última avaliação
   const ultimaAval = historico[historico.length - 1];
   const pesoAtual = parseFloat(ultimaAval.peso) || 0;
   const gorduraAtual = parseFloat(ultimaAval.percentualGordura) || 0;
@@ -101,6 +101,11 @@ export default function DashboardAluno() {
   const paAtual = ultimaAval.pa || 'N/A';
   const oximetriaAtual = ultimaAval.oximetria || 'N/A';
 
+  // Dados salvos de Gordura Visceral
+  const visceralNivel = ultimaAval.gorduraVisceralNivel || 0;
+  const visceralArea = ultimaAval.gorduraVisceralArea || 0;
+  const visceralClassificacao = ultimaAval.gorduraVisceralClassificacao || 'Normal';
+
   // Gráfico de Rosca (Composição Atual)
   const dadosRosca = {
     labels: ['Massa Magra (kg)', 'Massa Gorda (kg)'],
@@ -111,7 +116,7 @@ export default function DashboardAluno() {
     }],
   };
 
-  // Histórico para gráficos
+  // Histórico
   const datas = historico.map(av => formatarDataBr(av.dataAval));
   const pesos = historico.map(av => parseFloat(av.peso) || 0);
   const percentualGorduras = historico.map(av => parseFloat(av.percentualGordura) || 0);
@@ -119,8 +124,11 @@ export default function DashboardAluno() {
   const flexoes = historico.map(av => parseFloat(av.flexaoBraco) || 0);
   const sentaLevantaHistorico = historico.map(av => parseFloat(av.sentaLevanta) || 0);
   const pranchaHistorico = historico.map(av => parseFloat(av.prancha) || 0);
+  const cinturas = historico.map(av => parseFloat(av.cintura) || 0);
+  const abdomens = historico.map(av => parseFloat(av.abdomen) || 0);
+  const quadris = historico.map(av => parseFloat(av.quadril) || 0);
 
-  // Gráficos de Linha
+  // Gráficos
   const dadosEvolucaoCorporal = {
     labels: datas,
     datasets: [
@@ -139,6 +147,15 @@ export default function DashboardAluno() {
     plugins: { legend: { position: 'bottom' } }
   };
 
+  const dadosEvolucaoCircunferencias = {
+    labels: datas,
+    datasets: [
+      { label: 'Cintura (cm)', data: cinturas, borderColor: '#e53e3e', backgroundColor: 'rgba(229, 62, 62, 0.2)', tension: 0.3 },
+      { label: 'Abdômen (cm)', data: abdomens, borderColor: '#d69e2e', backgroundColor: 'rgba(214, 158, 46, 0.2)', tension: 0.3 },
+      { label: 'Quadril (cm)', data: quadris, borderColor: '#3182ce', backgroundColor: 'rgba(49, 130, 206, 0.2)', tension: 0.3 },
+    ],
+  };
+
   const dadosEvolucaoVO2 = {
     labels: datas,
     datasets: [{ label: 'VO2max (ml/kg/min)', data: vo2Historico, borderColor: '#319795', backgroundColor: 'rgba(49, 151, 149, 0.2)', tension: 0.3 }],
@@ -148,8 +165,7 @@ export default function DashboardAluno() {
     labels: datas,
     datasets: [
       { label: 'Flexão (reps/1min)', data: flexoes, borderColor: '#38a169', backgroundColor: 'rgba(56, 161, 105, 0.2)', tension: 0.3 },
-      { label: 'Senta/Levanta (reps/30s)', data: sentaLevantaHistorico, borderColor: '#d69e2e', backgroundColor: 'rgba(214, 158, 46, 0.2)', tension: 0.3 },
-      { label: 'Prancha Isométrica (segundos)', data: pranchaHistorico, borderColor: '#805ad5', backgroundColor: 'rgba(128, 90, 213, 0.2)', tension: 0.3 },
+      { label: 'Senta/Levanta (30s)', data: sentaLevantaHistorico, borderColor: '#b7791f', backgroundColor: 'rgba(183, 121, 31, 0.2)', tension: 0.3 },
     ],
   };
 
@@ -163,8 +179,8 @@ export default function DashboardAluno() {
       <h2 style={{ color: '#1a365d', marginBottom: '5px' }}>Dashboard de Evolução: {aluno.nome}</h2>
       <p style={{ color: '#4a5568', marginBottom: '25px' }}>Sexo: {aluno.sexo === 'M' ? 'Masculino' : 'Feminino'} | Data de Nasc.: {formatarDataBr(aluno.dataNasc)}</p>
 
-      {/* CARDS DE RESUMO (KPIs) COMPLETOS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+      {/* CARDS DE RESUMO (KPIs) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginBottom: '20px' }}>
         <div style={cardKpiStyle('#2b6cb0')}>
           <h4>Peso Atual</h4>
           <h2>{pesoAtual} kg</h2>
@@ -173,17 +189,51 @@ export default function DashboardAluno() {
           <h4>% de Gordura</h4>
           <h2>{gorduraAtual}%</h2>
         </div>
-        <div style={cardKpiStyle('#38a169')}>
-          <h4>Massa Muscular</h4>
-          <h2>{massaMagraAtual}%</h2>
+        <div style={cardKpiStyle(visceralNivel >= 10 ? '#e53e3e' : '#319795')}>
+          <h4>Gordura Visceral</h4>
+          <h2>Nível {visceralNivel}</h2>
         </div>
         <div style={cardKpiStyle('#319795')}>
           <h4>VO2max Atual</h4>
-          <h2>{vo2Atual} <span style={{fontSize: '11px'}}>ml/kg/min</span></h2>
+          <h2>{vo2Atual} <span style={{fontSize: '10px'}}>ml/kg/min</span></h2>
         </div>
       </div>
 
-      {/* CARD DE SINAIS VITAIS EM REPOUSO */}
+      {/* BANNER DE RISCO DE GORDURA VISCERAL */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        padding: '16px 20px',
+        borderRadius: '8px',
+        borderLeft: `6px solid ${visceralNivel >= 10 ? '#e53e3e' : '#38a169'}`,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+        marginBottom: '20px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '10px'
+      }}>
+        <div>
+          <h4 style={{ margin: 0, color: '#2d3748', fontSize: '15px' }}>Indicador de Gordura Visceral e Saúde Metabólica</h4>
+          <p style={{ margin: '4px 0 0 0', color: '#718096', fontSize: '13px' }}>
+            Área Visceral Estimada: <strong>{visceralArea} cm²</strong> | Cintura: <strong>{ultimaAval.cintura || 0} cm</strong>
+          </p>
+        </div>
+        <div>
+          <span style={{
+            backgroundColor: visceralNivel >= 10 ? '#fed7d7' : '#c6f6d5',
+            color: visceralNivel >= 10 ? '#9b2c2c' : '#22543d',
+            padding: '6px 14px',
+            borderRadius: '20px',
+            fontWeight: 'bold',
+            fontSize: '12px'
+          }}>
+            {visceralClassificacao}
+          </span>
+        </div>
+      </div>
+
+      {/* CARD DE SINAIS VITAIS */}
       <div style={{ backgroundColor: '#ffffff', padding: '15px 20px', borderRadius: '8px', border: '1px solid #cbd5e0', marginBottom: '30px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
         <div>
           <span style={{ fontSize: '13px', color: '#666', display: 'block' }}>Pressão Arterial (Repouso):</span>
@@ -202,7 +252,6 @@ export default function DashboardAluno() {
       {/* GRID DE GRÁFICOS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         
-        {/* Composição Corporal */}
         <div style={graphContainerStyle}>
           <h3 style={graphTitleStyle}>Composição Corporal Atual (Siri)</h3>
           <div style={{ maxWidth: '260px', margin: '0 auto' }}>
@@ -210,29 +259,30 @@ export default function DashboardAluno() {
           </div>
         </div>
 
-        {/* Peso vs % Gordura */}
         <div style={graphContainerStyle}>
           <h3 style={graphTitleStyle}>Evolução de Peso e % de Gordura</h3>
           <Line data={dadosEvolucaoCorporal} options={opcoesEvolucaoCorporal} />
         </div>
 
-        {/* VO2max */}
+        <div style={graphContainerStyle}>
+          <h3 style={graphTitleStyle}>Evolução de Circunferências (cm)</h3>
+          <Line data={dadosEvolucaoCircunferencias} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
+        </div>
+
         <div style={graphContainerStyle}>
           <h3 style={graphTitleStyle}>Evolução Cardiorrespiratória (VO2max)</h3>
           <Line data={dadosEvolucaoVO2} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
         </div>
 
-        {/* Testes de Força (Flexão + Senta/Levanta) */}
         <div style={graphContainerStyle}>
           <h3 style={graphTitleStyle}>Resistência e Força Muscular</h3>
           <Line data={dadosEvolucaoForca} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
         </div>
 
-        {/* Prancha Isométrica */}
-        {/* <div style={{ ...graphContainerStyle, gridColumn: '1 / -1' }}>
+        <div style={graphContainerStyle}>
           <h3 style={graphTitleStyle}>Evolução da Prancha Isométrica (Core)</h3>
           <Line data={dadosEvolucaoPrancha} options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }} />
-        </div> */}
+        </div>
 
       </div>
     </div>

@@ -18,6 +18,7 @@ export default function SistemaAvaliacao() {
   const [clientes, setClientes] = useState([]);
   const [alunoSelecionado, setAlunoSelecionado] = useState(null);
   const [historicoAvaliacoes, setHistoricoAvaliacoes] = useState([]);
+  const [ordemHistorico, setOrdemHistorico] = useState("asc");
 
   // Estados dos formulários
   const [novoCliente, setNovoCliente] = useState({
@@ -106,6 +107,12 @@ export default function SistemaAvaliacao() {
     setHistoricoAvaliacoes(lista);
     setAba("detalhesAluno");
   };
+
+  const historicoOrdenado = [...historicoAvaliacoes].sort((a, b) => {
+    const dataA = new Date(a.dataAval);
+    const dataB = new Date(b.dataAval);
+    return ordemHistorico === "asc" ? dataA - dataB : dataB - dataA;
+  });
 
   return (
     <div
@@ -239,25 +246,6 @@ export default function SistemaAvaliacao() {
               marginBottom: "20px",
             }}
           >
-            {/* <h3>Adicionar Nova Avaliação</h3>
-            <form onSubmit={handleSalvarAvaliacao} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-              <div>
-                <label>Data da Avaliação:</label>
-                <input type="date" value={avaliacao.dataAval} onChange={e => setAvaliacao({...avaliacao, dataAval: e.target.value})} style={inputStyle} />
-              </div>
-              <div>
-                <label>Peso (kg):</label>
-                <input type="number" step="0.1" value={avaliacao.peso} onChange={e => setAvaliacao({...avaliacao, peso: e.target.value})} required style={inputStyle} />
-              </div>
-              <div>
-                <label>Estatura (cm):</label>
-                <input type="number" value={avaliacao.estatura} onChange={e => setAvaliacao({...avaliacao, estatura: e.target.value})} required style={inputStyle} />
-              </div>
-              {/* Outros campos de dobras e testes podem ser adicionados aqui de forma idêntica 
-              <div style={{ gridColumn: 'span 3' }}>
-                <button type="submit" style={submitBtnStyle}>Salvar Nova Avaliação no Firestore</button>
-              </div>
-            </form> */}
             <FormularioAvaliacao
               alunoSelecionado={alunoSelecionado}
               onAvaliacaoSalva={carregarHistorico}
@@ -265,6 +253,26 @@ export default function SistemaAvaliacao() {
           </div>
 
           <h3>Histórico de Avaliações ({historicoAvaliacoes.length})</h3>
+          {/* BOTÃO PARA ALTERNAR A ORDENAÇÃO DO HISTÓRICO */}
+          <button
+            onClick={() =>
+              setOrdemHistorico(ordemHistorico === "asc" ? "desc" : "asc")
+            }
+            style={{
+              backgroundColor: "#2b6cb0",
+              color: "#fff",
+              border: "none",
+              padding: "6px 12px",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: "bold",
+            }}
+          >
+            {ordemHistorico === "asc"
+              ? "📅 Mais Antigas Primeiras (Crescente ↑)"
+              : "📅 Mais Recentes Primeiras (Decrescente ↓)"}
+          </button>
           <div
             key={alunoSelecionado.id}
             style={{
@@ -296,18 +304,26 @@ export default function SistemaAvaliacao() {
             </Link>
           </div>
           <ul>
-            {historicoAvaliacoes.map((av, index) => (
+            {historicoOrdenado.map((av) => (
               <li
-                key={index}
+                key={av.id}
                 style={{
-                  padding: "10px",
+                  padding: "12px",
                   background: "#fff",
                   border: "1px solid #ccc",
-                  marginBottom: "5px",
+                  marginBottom: "8px",
+                  borderRadius: "6px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-                Data: {formatarDataBr(av.dataAval)} | Peso: {av.peso} kg | Estatura:{" "}
-                {av.estatura} cm
+                <span>
+                  <strong>Data:</strong> {formatarDataBr(av.dataAval)} |{" "}
+                  <strong>Peso:</strong> {av.peso} kg |{" "}
+                  <strong>Estatura:</strong> {av.estatura} cm |{" "}
+                  <strong>% Gordura:</strong> {av.percentualGordura || "N/A"}%
+                </span>
               </li>
             ))}
           </ul>
