@@ -1,13 +1,22 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
 import reportWebVitals from './reportWebVitals';
+import AppAvaliacao from './AppAvaliacao';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
+export const formatarDataBr = (dataString) => {
+  if (!dataString) return '';
+  const partes = dataString.split('-');
+  if (partes.length !== 3) return dataString; // Retorna original se não estiver no formato AAAA-MM-DD
+  const [ano, mes, dia] = partes;
+  return `${dia}/${mes}/${ano}`;
+};
+
 root.render(
   <React.StrictMode>
-    <App />
+    <AppAvaliacao />
   </React.StrictMode>
 );
 
