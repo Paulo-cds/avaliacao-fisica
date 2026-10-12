@@ -30,7 +30,7 @@ function Private({ children }) {
       }
     });
   };
-
+  
   return userData && children;
 }
 

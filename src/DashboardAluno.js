@@ -23,6 +23,7 @@ import {
   Legend,
 } from "chart.js";
 import { Line, Doughnut } from "react-chartjs-2";
+import { getAuth } from "firebase/auth";
 
 ChartJS.register(
   CategoryScale,
@@ -32,7 +33,7 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 const formatarDataBr = (dataString) => {
@@ -50,6 +51,7 @@ export default function DashboardAluno() {
   const [loading, setLoading] = useState(true);
   const [ordemData, setOrdemData] = useState("asc");
   const isMobile = useMobile(768);
+  const auth = getAuth();
 
   useEffect(() => {
     const buscarDadosDoAluno = async () => {
@@ -65,11 +67,11 @@ export default function DashboardAluno() {
 
         const avaliacoesQuery = query(
           collection(db, "avaliacoes"),
-          where("clienteId", "==", id)
+          where("clienteId", "==", id),
         );
         const avaliacoesSnapshot = await getDocs(avaliacoesQuery);
         const listaAvaliacoes = avaliacoesSnapshot.docs.map((doc) =>
-          doc.data()
+          doc.data(),
         );
 
         setHistorico(listaAvaliacoes);
@@ -135,14 +137,12 @@ export default function DashboardAluno() {
     );
   }
 
-  const historicoOrdenado = [...historico].sort((a, b) => {
-    const dataA = new Date(a.dataAval);
-    const dataB = new Date(b.dataAval);
-    return ordemData === "asc" ? dataA - dataB : dataB - dataA;
-  });
+  const historicoOrdenado = [...historico]
+    .sort((a, b) => new Date(a.dataAval) - new Date(b.dataAval))
+    .slice(-5);
 
   const avaliacaoMaisRecente = [...historico].sort(
-    (a, b) => new Date(a.dataAval) - new Date(b.dataAval)
+    (a, b) => new Date(a.dataAval) - new Date(b.dataAval),
   )[historico.length - 1];
 
   const pesoAtual = parseFloat(avaliacaoMaisRecente.peso) || 0;
@@ -174,19 +174,19 @@ export default function DashboardAluno() {
   const datas = historicoOrdenado.map((av) => formatarDataBr(av.dataAval));
   const pesos = historicoOrdenado.map((av) => parseFloat(av.peso) || 0);
   const percentualGorduras = historicoOrdenado.map(
-    (av) => parseFloat(av.percentualGordura) || 0
+    (av) => parseFloat(av.percentualGordura) || 0,
   );
   const vo2Historico = historicoOrdenado.map(
-    (av) => parseFloat(av.vo2Max) || 0
+    (av) => parseFloat(av.vo2Max) || 0,
   );
   const flexoes = historicoOrdenado.map(
-    (av) => parseFloat(av.flexaoBraco) || 0
+    (av) => parseFloat(av.flexaoBraco) || 0,
   );
   const sentaLevantaHistorico = historicoOrdenado.map(
-    (av) => parseFloat(av.sentaLevanta) || 0
+    (av) => parseFloat(av.sentaLevanta) || 0,
   );
   const pranchaHistorico = historicoOrdenado.map(
-    (av) => parseFloat(av.prancha) || 0
+    (av) => parseFloat(av.prancha) || 0,
   );
   const cinturas = historicoOrdenado.map((av) => parseFloat(av.cintura) || 0);
   const abdomens = historicoOrdenado.map((av) => parseFloat(av.abdomen) || 0);
@@ -335,7 +335,7 @@ export default function DashboardAluno() {
         }}
       >
         <div>
-          {Private && (
+          {auth && auth._currentUser && (
             <Link
               to="/"
               style={{
@@ -589,6 +589,352 @@ export default function DashboardAluno() {
             }}
           />
         </div>
+      </div>
+
+      {/* Seção de Comparação Visual por Fotos no Dashboard */}
+      <div
+        style={{
+          backgroundColor: "#ffffff",
+          padding: "20px",
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+          border: "1px solid #e2e8f0",
+          marginBottom: "30px",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "16px",
+            color: "#2d3748",
+            marginBottom: "15px",
+            fontWeight: "600",
+          }}
+        >
+          Evolução Visual
+        </h3>
+
+        {historicoOrdenado.length > 1 ? (
+          <>
+            <p>
+              Penúltima Avaliação:{" "}
+              {formatarDataBr(
+                historicoOrdenado[historicoOrdenado.length - 2].dataAval,
+              )}
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "15px",
+                textAlign: "center",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#4a5568",
+                  }}
+                >
+                  Frente
+                </p>
+                {historicoOrdenado[historicoOrdenado.length - 2].fotoFrente ? (
+                  <img
+                    src={
+                      historicoOrdenado[historicoOrdenado.length - 2].fotoFrente
+                    }
+                    alt="Frente"
+                    style={{
+                      width: "100%",
+                      maxHeight: "250px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e0",
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                    Sem foto cadastrada
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#4a5568",
+                  }}
+                >
+                  Perfil
+                </p>
+                {historicoOrdenado[historicoOrdenado.length - 2].fotoPerfil ? (
+                  <img
+                    src={
+                      historicoOrdenado[historicoOrdenado.length - 2].fotoPerfil
+                    }
+                    alt="Perfil"
+                    style={{
+                      width: "100%",
+                      maxHeight: "250px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e0",
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                    Sem foto cadastrada
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#4a5568",
+                  }}
+                >
+                  Costas
+                </p>
+                {historicoOrdenado[historicoOrdenado.length - 2].fotoCostas ? (
+                  <img
+                    src={
+                      historicoOrdenado[historicoOrdenado.length - 2].fotoCostas
+                    }
+                    alt="Costas"
+                    style={{
+                      width: "100%",
+                      maxHeight: "250px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e0",
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                    Sem foto cadastrada
+                  </p>
+                )}
+              </div>
+            </div>
+            <p style={{ marginTop: "15px" }}>
+              Última Avaliação:{" "}
+              {formatarDataBr(
+                historicoOrdenado[historicoOrdenado.length - 1].dataAval,
+              )}
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "15px",
+                textAlign: "center",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#4a5568",
+                  }}
+                >
+                  Frente
+                </p>
+                {historicoOrdenado[historicoOrdenado.length - 1].fotoFrente ? (
+                  <img
+                    src={
+                      historicoOrdenado[historicoOrdenado.length - 1].fotoFrente
+                    }
+                    alt="Frente"
+                    style={{
+                      width: "100%",
+                      maxHeight: "250px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e0",
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                    Sem foto cadastrada
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#4a5568",
+                  }}
+                >
+                  Perfil
+                </p>
+                {historicoOrdenado[historicoOrdenado.length - 1].fotoPerfil ? (
+                  <img
+                    src={
+                      historicoOrdenado[historicoOrdenado.length - 1].fotoPerfil
+                    }
+                    alt="Perfil"
+                    style={{
+                      width: "100%",
+                      maxHeight: "250px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e0",
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                    Sem foto cadastrada
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#4a5568",
+                  }}
+                >
+                  Costas
+                </p>
+                {historicoOrdenado[historicoOrdenado.length - 1].fotoCostas ? (
+                  <img
+                    src={
+                      historicoOrdenado[historicoOrdenado.length - 1].fotoCostas
+                    }
+                    alt="Costas"
+                    style={{
+                      width: "100%",
+                      maxHeight: "250px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e0",
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                    Sem foto cadastrada
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <p>
+              Última Avaliação:{" "}
+              {formatarDataBr(
+                historicoOrdenado[historicoOrdenado.length - 1].dataAval,
+              )}
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "15px",
+                textAlign: "center",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#4a5568",
+                  }}
+                >
+                  Frente
+                </p>
+                {avaliacaoMaisRecente.fotoFrente ? (
+                  <img
+                    src={avaliacaoMaisRecente.fotoFrente}
+                    alt="Frente"
+                    style={{
+                      width: "100%",
+                      maxHeight: "250px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e0",
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                    Sem foto cadastrada
+                  </p>
+                )}
+              </div>
+              <div>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#4a5568",
+                  }}
+                >
+                  Perfil
+                </p>
+                {avaliacaoMaisRecente.fotoPerfil ? (
+                  <img
+                    src={avaliacaoMaisRecente.fotoPerfil}
+                    alt="Perfil"
+                    style={{
+                      width: "100%",
+                      maxHeight: "250px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e0",
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                    Sem foto cadastrada
+                  </p>
+                )}
+              </div>
+              <div>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#4a5568",
+                  }}
+                >
+                  Costas
+                </p>
+                {avaliacaoMaisRecente.fotoCostas ? (
+                  <img
+                    src={avaliacaoMaisRecente.fotoCostas}
+                    alt="Costas"
+                    style={{
+                      width: "100%",
+                      maxHeight: "250px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e0",
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                    Sem foto cadastrada
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

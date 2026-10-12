@@ -3,12 +3,14 @@ import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import SistemaAvaliacao from "./SistemaAvaliacao";
 import DashboardAluno from "./DashboardAluno";
 import { auth } from "./firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import Private from "./Private";
 import Login from "./Login";
+import EditarAvaliacao from "./EditarAvaliacao";
 //cod implantação - AKfycbzNetCzswFf7KGjy8m08ADZVagyi7Q-jK3goRDRRQIUYOJhk9MIHXke_28NL4wkIPhI
 const AppAvaliacao = () => {
   const [usuario, setUsuario] = useState(null);
+  const auth = getAuth();
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
@@ -41,7 +43,7 @@ const AppAvaliacao = () => {
         <h2 style={{ margin: 0, fontSize: "20px" }}>
           Sistema de Avaliação Física
         </h2>
-        {Private && (
+        {auth && auth._currentUser && (
           <div style={{ marginTop: "10px" }}>
             <Link
               to="/"
@@ -83,6 +85,15 @@ const AppAvaliacao = () => {
               <h2 style={{ textAlign: "center", color: "red" }}>
                 Página não encontrada
               </h2>
+            }
+          />
+
+          <Route
+            path="/editar-avaliacao/:id"
+            element={
+              <Private>
+                <EditarAvaliacao />
+              </Private>
             }
           />
         </Routes>
