@@ -24,6 +24,7 @@ import {
 } from "chart.js";
 import { Line, Doughnut } from "react-chartjs-2";
 import { getAuth } from "firebase/auth";
+import CardGorduraVisceral from "./CardGorduraVisceral";
 
 ChartJS.register(
   CategoryScale,
@@ -457,7 +458,7 @@ export default function DashboardAluno() {
             Cintura: <strong>{avaliacaoMaisRecente.cintura || 0} cm</strong>
           </p>
         </div>
-        <div>
+        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
           <span
             style={{
               backgroundColor: visceralNivel >= 10 ? "#fed7d7" : "#c6f6d5",
@@ -470,6 +471,7 @@ export default function DashboardAluno() {
           >
             {visceralClassificacao}
           </span>
+        <CardGorduraVisceral nivel={visceralNivel} classificacao={visceralClassificacao} />
         </div>
       </div>
 
