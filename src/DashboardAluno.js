@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { db } from "./firebase";
+import html2pdf from "html2pdf.js";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import {
   doc,
   getDoc,
@@ -86,6 +89,63 @@ export default function DashboardAluno() {
 
     buscarDadosDoAluno();
   }, [id]);
+
+  const dashboardRef = useRef(null);
+
+  const gerarPDF = async () => {
+    console.log("chamou...");
+    const element = dashboardRef.current;
+    console.log("elemento do dashboardRef:", element);
+    if (!element) return;
+
+    try {
+      // 1. Renderiza o container do React em um Canvas HTML5 de alta resolução
+      const canvas = await html2canvas(element, {
+        scale: 2, // Garante nitidez do texto e dos gráficos
+        useCORS: true, // Permite carregar imagens de origens externas/Base64
+        allowTaint: true,
+        logging: false,
+      });
+
+      // 2. Converte o canvas para imagem JPEG de qualidade
+      const imgData = canvas.toDataURL("image/jpeg", 0.98);
+
+      // 3. Configura a página do PDF (Formato A4 em milímetros)
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      // Calcula a proporção para caber perfeitamente no A4
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 10; // Margem superior
+
+      const calculatedWidth = imgWidth * ratio;
+      const calculatedHeight = imgHeight * ratio;
+
+      // 4. Adiciona a imagem renderizada ao arquivo PDF
+      pdf.addImage(
+        imgData,
+        "JPEG",
+        imgX,
+        imgY,
+        calculatedWidth,
+        calculatedHeight,
+      );
+
+      // 5. Baixa o documento com o nome do aluno
+      const nomeFormatado = aluno?.nome?.replace(/\s+/g, "_") || "Aluno";
+      pdf.save(`Avaliacao_Fisica_${nomeFormatado}.pdf`);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      alert(
+        "Houve um erro ao tentar gerar o PDF. Verifique se os gráficos e imagens foram totalmente carregados.",
+      );
+    }
+  };
 
   if (loading) {
     return (
@@ -317,6 +377,16 @@ export default function DashboardAluno() {
     ],
   };
 
+  const linkDashboard = window.location.href;
+  const mensagemWhatsApp = encodeURIComponent(
+    `Olá, ${aluno?.nome}! 👋\n\nSua avaliação física recente já está pronta! 📊\n\n` +
+      `*Resumo da Avaliação (${avaliacaoMaisRecente?.dataAval}):*\n` +
+      `• Peso: ${avaliacaoMaisRecente?.peso} kg\n` +
+      `• % Gordura: ${avaliacaoMaisRecente?.percentualGordura}%\n` +
+      `• Gordura Visceral: Nível ${avaliacaoMaisRecente?.gorduraVisceralNivel || "-"}\n\n` +
+      `Acesse seu painel completo e interativo pelo link: ${linkDashboard}`,
+  );
+
   return (
     <div
       style={{
@@ -331,632 +401,745 @@ export default function DashboardAluno() {
         fontFamily: "Segoe UI, sans-serif",
       }}
     >
-      {/* CABEÇALHO E ORDENAÇÃO */}
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px",
-          flexWrap: "wrap",
-          gap: "15px",
+          maxWidth: "900px",
+          margin: "0 auto",
+          padding: "15px",
+          fontFamily: "Segoe UI, sans-serif",
         }}
       >
-        <div>
-          {auth && auth._currentUser && (
-            <Link
-              to="/"
-              style={{
-                display: "inline-block",
-                marginBottom: "8px",
-                padding: "6px 12px",
-                background: "#edf2f7",
-                border: "1px solid #cbd5e0",
-                borderRadius: "6px",
-                color: "#2d3748",
-                textDecoration: "none",
-                fontWeight: "bold",
-                fontSize: "0.85rem",
-              }}
-            >
-              ← Voltar aos Clientes
-            </Link>
-          )}
-          <h2 style={{ color: "#1a365d", margin: "0 0 5px 0" }}>
-            Dashboard de Evolução: {aluno.nome}
-          </h2>
-          <p style={{ color: "#4a5568", margin: 0, fontSize: "0.9rem" }}>
-            Sexo: {aluno.sexo === "M" ? "Masculino" : "Feminino"} | Data de
-            Nasc.: {formatarDataBr(aluno.dataNasc)}
-          </p>
-        </div>
-
+        {/* Barra de Ações (Botão de PDF e Envio por WhatsApp) */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
             gap: "10px",
-            backgroundColor: "#fff",
-            padding: "8px 12px",
-            borderRadius: "6px",
-            border: "1px solid #cbd5e0",
+            justifyContent: "flex-end",
+            marginBottom: "20px",
+            flexWrap: "wrap",
           }}
         >
-          <label
-            style={{ fontSize: "13px", color: "#4a5568", fontWeight: "bold" }}
-          >
-            Ordem:
-          </label>
+          {/* Botão para Gerar PDF */}
           <button
-            onClick={() => setOrdemData(ordemData === "asc" ? "desc" : "asc")}
+            onClick={gerarPDF}
             style={{
-              backgroundColor: "#3182ce",
+              background: "#2b6cb0",
               color: "#fff",
               border: "none",
-              padding: "6px 12px",
-              borderRadius: "4px",
+              padding: "10px 16px",
+              borderRadius: "6px",
+              fontWeight: "bold",
               cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "13px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
             }}
           >
-            {ordemData === "asc"
-              ? "📅 Crescente (Antigas ↑)"
-              : "📅 Decrescente (Recentes ↓)"}
+            📄 Baixar Relatório PDF
           </button>
+
+          {/* Botão de Envio Direto via WhatsApp */}
+          {auth && auth._currentUser && (
+            <a
+              href={`https://api.whatsapp.com/send?text=${mensagemWhatsApp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: "#25D366",
+                color: "#fff",
+                padding: "10px 16px",
+                borderRadius: "6px",
+                fontWeight: "bold",
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+            >
+              💬 Enviar resumo via WhatsApp
+            </a>
+          )}
         </div>
       </div>
-
-      {/* CARDS DE RESUMO (KPIs) - 7 CARDS FLUIDOS */}
       <div
+        ref={dashboardRef}
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: "15px",
-          marginBottom: "20px",
+          paddingBottom: "20px",
         }}
       >
-        <div style={cardKpiStyle("#2b6cb0")}>
-          <h4>Peso Atual</h4>
-          <h2>{pesoAtual} kg</h2>
-        </div>
-        <div style={cardKpiStyle("#dd6b20")}>
-          <h4>% de Gordura</h4>
-          <h2>{gorduraAtual}%</h2>
-        </div>
-        <div style={cardKpiStyle(visceralNivel >= 10 ? "#e53e3e" : "#319795")}>
-          <h4>Gordura Visceral</h4>
-          <h2>Nível {visceralNivel}</h2>
-        </div>
-        <div style={cardKpiStyle("#319795")}>
-          <h4>VO2max Atual</h4>
-          <h2>
-            {vo2Atual} <span style={{ fontSize: "10px" }}>ml/kg/min</span>
-          </h2>
-        </div>
-      </div>
-
-      {/* BANNER DE RISCO DE GORDURA VISCERAL */}
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          padding: "16px 20px",
-          borderRadius: "8px",
-          borderLeft: `6px solid ${
-            visceralNivel >= 10 ? "#e53e3e" : "#38a169"
-          }`,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-          marginBottom: "20px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "10px",
-        }}
-      >
-        <div>
-          <h4 style={{ margin: 0, color: "#2d3748", fontSize: "15px" }}>
-            Indicador de Gordura Visceral e Saúde Metabólica
-          </h4>
-          <p
-            style={{ margin: "4px 0 0 0", color: "#718096", fontSize: "13px" }}
-          >
-            Área Visceral Estimada: <strong>{visceralArea} cm²</strong> |
-            Cintura: <strong>{avaliacaoMaisRecente.cintura || 0} cm</strong>
-          </p>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-          <span
-            style={{
-              backgroundColor: visceralNivel >= 10 ? "#fed7d7" : "#c6f6d5",
-              color: visceralNivel >= 10 ? "#9b2c2c" : "#22543d",
-              padding: "6px 14px",
-              borderRadius: "20px",
-              fontWeight: "bold",
-              fontSize: "12px",
-            }}
-          >
-            {visceralClassificacao}
-          </span>
-          <CardGorduraVisceral
-            nivel={visceralNivel}
-            classificacao={visceralClassificacao}
-          />
-        </div>
-      </div>
-
-      {/* CARD DE SINAIS VITAIS */}
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          padding: "15px 20px",
-          borderRadius: "8px",
-          border: "1px solid #cbd5e0",
-          marginBottom: "30px",
-          display: "flex",
-          justifyContent: !isMobile ? "space-around" : "center",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "15px",
-          flexDirection: isMobile ? "column" : "row",
-        }}
-      >
-        <div>
-          <span style={{ fontSize: "13px", color: "#666", display: "block" }}>
-            Pressão Arterial (Repouso):
-          </span>
-          <strong style={{ fontSize: "18px", color: "#2d3748" }}>
-            {paAtual} mmHg
-          </strong>
-        </div>
+        {/* CABEÇALHO E ORDENAÇÃO */}
         <div
           style={{
-            borderLeft: !isMobile ? "1px solid #e2e8f0" : "none",
-            paddingLeft: !isMobile ? "20px" : "0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "20px",
+            flexWrap: "wrap",
+            gap: "15px",
           }}
         >
-          <span style={{ fontSize: "13px", color: "#666", display: "block" }}>
-            Oximetria (SpO2):
-          </span>
-          <strong style={{ fontSize: "18px", color: "#2d3748" }}>
-            {oximetriaAtual}%
-          </strong>
-        </div>
-        <div
-          style={{
-            borderLeft: !isMobile ? "1px solid #e2e8f0" : "none",
-            paddingLeft: !isMobile ? "20px" : "0",
-          }}
-        >
-          <span style={{ fontSize: "13px", color: "#666", display: "block" }}>
-            Última Avaliação:
-          </span>
-          <strong style={{ fontSize: "18px", color: "#2d3748" }}>
-            {formatarDataBr(avaliacaoMaisRecente.dataAval)}
-          </strong>
-        </div>
-      </div>
-
-      {/* Tabela de Perimetria de Membros (Braços e Pernas) */}
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          padding: "20px",
-          borderRadius: "8px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-          border: "1px solid #e2e8f0",
-          marginBottom: "25px",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "16px",
-            color: "#2d3748",
-            marginBottom: "15px",
-            fontWeight: "600",
-          }}
-        >
-          Comparativo de Medidas (Braços e Pernas)
-        </h3>
-
-        <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              textAlign: "left",
-              fontSize: "14px",
-            }}
-          >
-            <thead>
-              <tr
+          <div>
+            {auth && auth._currentUser && (
+              <Link
+                to="/"
                 style={{
+                  display: "inline-block",
+                  marginBottom: "8px",
+                  padding: "6px 12px",
                   background: "#edf2f7",
-                  borderBottom: "2px solid #cbd5e0",
+                  border: "1px solid #cbd5e0",
+                  borderRadius: "6px",
+                  color: "#2d3748",
+                  textDecoration: "none",
+                  fontWeight: "bold",
+                  fontSize: "0.85rem",
                 }}
               >
-                <th style={{ padding: "8px" }}>Medida (cm)</th>
-                <th style={{ padding: "8px" }}>Primeira Avaliação</th>
-                <th style={{ padding: "8px" }}>Última Avaliação</th>
-                <th style={{ padding: "8px" }}>Diferença</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { label: "Braço Relax. (Dir)", dir: "bracoRelaxDir" },
-                { label: "Braço Relax. (Esq)", dir: "bracoRelaxEsq" },
-                { label: "Braço Contr. (Dir)", dir: "bracoContrDir" },
-                { label: "Braço Contr. (Esq)", dir: "bracoContrEsq" },
-                { label: "Coxa (Dir)", dir: "coxaDir" },
-                { label: "Coxa (Esq)", dir: "coxaEsq" },
-                { label: "Panturrilha (Dir)", dir: "panturrilhaDir" },
-                { label: "Panturrilha (Esq)", dir: "panturrilhaEsq" },
-              ].map((item, index) => {
-                const primeiraAval = historicoOrdenadoGeral[0] || {};
-                const ultimaAval = avaliacaoMaisRecente || {};
+                ← Voltar aos Clientes
+              </Link>
+            )}
+            <h2 style={{ color: "#1a365d", margin: "0 0 5px 0" }}>
+              Dashboard de Evolução: {aluno.nome}
+            </h2>
+            <p style={{ color: "#4a5568", margin: 0, fontSize: "0.9rem" }}>
+              Sexo: {aluno.sexo === "M" ? "Masculino" : "Feminino"} | Data de
+              Nasc.: {formatarDataBr(aluno.dataNasc)}
+            </p>
+          </div>
 
-                const valInicial = parseFloat(primeiraAval[item.dir]) || 0;
-                const valAtual = parseFloat(ultimaAval[item.dir]) || 0;
-                const dif = parseFloat((valAtual - valInicial).toFixed(1));
-
-                return (
-                  <tr key={index} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                    <td style={{ padding: "8px", fontWeight: "500" }}>
-                      {item.label}
-                    </td>
-                    <td style={{ padding: "8px" }}>
-                      {valInicial > 0 ? `${valInicial} cm` : "-"}
-                    </td>
-                    <td style={{ padding: "8px" }}>
-                      {valAtual > 0 ? `${valAtual} cm` : "-"}
-                    </td>
-                    <td
-                      style={{
-                        padding: "8px",
-                        fontWeight: "bold",
-                        color:
-                          dif > 0 ? "#2b6cb0" : dif < 0 ? "#e53e3e" : "#718096",
-                      }}
-                    >
-                      {dif > 0 ? `+${dif} cm` : `${dif} cm`}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* GRID DE GRÁFICOS (2 Colunas em desktop, coluna única em telas menores) */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-          gap: "20px",
-          marginBottom: "30px",
-        }}
-      >
-        <div style={graphContainerStyle}>
-          <h3 style={graphTitleStyle}>Composição Corporal Atual (Siri)</h3>
-          <div style={{ maxWidth: "260px", margin: "0 auto" }}>
-            <Doughnut data={dadosRosca} />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              backgroundColor: "#fff",
+              padding: "8px 12px",
+              borderRadius: "6px",
+              border: "1px solid #cbd5e0",
+            }}
+          >
+            <label
+              style={{ fontSize: "13px", color: "#4a5568", fontWeight: "bold" }}
+            >
+              Ordem:
+            </label>
+            <button
+              onClick={() => setOrdemData(ordemData === "asc" ? "desc" : "asc")}
+              style={{
+                backgroundColor: "#3182ce",
+                color: "#fff",
+                border: "none",
+                padding: "6px 12px",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                fontSize: "13px",
+              }}
+            >
+              {ordemData === "asc"
+                ? "📅 Crescente (Antigas ↑)"
+                : "📅 Decrescente (Recentes ↓)"}
+            </button>
           </div>
         </div>
 
-        <div style={graphContainerStyle}>
-          <h3 style={graphTitleStyle}>Evolução de Peso e % de Gordura</h3>
-          <Line data={dadosEvolucaoCorporal} options={opcoesEvolucaoCorporal} />
-        </div>
-
-        <div style={graphContainerStyle}>
-          <h3 style={graphTitleStyle}>Evolução de Circunferências (cm)</h3>
-          <Line
-            data={dadosEvolucaoCircunferencias}
-            options={{
-              responsive: true,
-              plugins: { legend: { position: "bottom" } },
-            }}
-          />
-        </div>
-
-        <div style={graphContainerStyle}>
-          <h3 style={graphTitleStyle}>Evolução Cardiorrespiratória (VO2max)</h3>
-          <Line
-            data={dadosEvolucaoVO2}
-            options={{
-              responsive: true,
-              plugins: { legend: { position: "bottom" } },
-            }}
-          />
-        </div>
-
-        <div style={graphContainerStyle}>
-          <h3 style={graphTitleStyle}>Resistência e Força Muscular</h3>
-          <Line
-            data={dadosEvolucaoForca}
-            options={{
-              responsive: true,
-              plugins: { legend: { position: "bottom" } },
-            }}
-          />
-        </div>
-
-        <div style={graphContainerStyle}>
-          <h3 style={graphTitleStyle}>Evolução da Prancha Isométrica (Core)</h3>
-          <Line
-            data={dadosEvolucaoPrancha}
-            options={{
-              responsive: true,
-              plugins: { legend: { position: "bottom" } },
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Seção de Comparação Visual por Fotos no Dashboard */}
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          padding: "20px",
-          borderRadius: "8px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-          border: "1px solid #e2e8f0",
-          marginBottom: "30px",
-        }}
-      >
-        <h3
+        {/* CARDS DE RESUMO (KPIs) - 7 CARDS FLUIDOS */}
+        <div
           style={{
-            fontSize: "16px",
-            color: "#2d3748",
-            marginBottom: "15px",
-            fontWeight: "600",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gap: "15px",
+            marginBottom: "20px",
           }}
         >
-          Evolução Visual
-        </h3>
+          <div style={cardKpiStyle("#2b6cb0")}>
+            <h4>Peso Atual</h4>
+            <h2>{pesoAtual} kg</h2>
+          </div>
+          <div style={cardKpiStyle("#dd6b20")}>
+            <h4>% de Gordura</h4>
+            <h2>{gorduraAtual}%</h2>
+          </div>
+          <div
+            style={cardKpiStyle(visceralNivel >= 10 ? "#e53e3e" : "#319795")}
+          >
+            <h4>Gordura Visceral</h4>
+            <h2>Nível {visceralNivel}</h2>
+          </div>
+          <div style={cardKpiStyle("#319795")}>
+            <h4>VO2max Atual</h4>
+            <h2>
+              {vo2Atual} <span style={{ fontSize: "10px" }}>ml/kg/min</span>
+            </h2>
+          </div>
+        </div>
 
-        {historicoOrdenado.length > 1 ? (
-          <>
-            <p>
-              Penúltima Avaliação:{" "}
-              {formatarDataBr(
-                historicoOrdenado[historicoOrdenado.length - 2].dataAval,
-              )}
-            </p>
-
-            <div
+        {/* BANNER DE RISCO DE GORDURA VISCERAL */}
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            padding: "16px 20px",
+            borderRadius: "8px",
+            borderLeft: `6px solid ${
+              visceralNivel >= 10 ? "#e53e3e" : "#38a169"
+            }`,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+            marginBottom: "20px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px",
+          }}
+        >
+          <div>
+            <h4 style={{ margin: 0, color: "#2d3748", fontSize: "15px" }}>
+              Indicador de Gordura Visceral e Saúde Metabólica
+            </h4>
+            <p
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: "15px",
-                textAlign: "center",
+                margin: "4px 0 0 0",
+                color: "#718096",
+                fontSize: "13px",
               }}
             >
-              <div>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    color: "#4a5568",
-                  }}
-                >
-                  Frente
-                </p>
-                {historicoOrdenado[historicoOrdenado.length - 2].fotoFrente ? (
-                  <img
-                    src={
-                      historicoOrdenado[historicoOrdenado.length - 2].fotoFrente
-                    }
-                    alt="Frente"
-                    style={{
-                      width: "100%",
-                      maxHeight: "350px",
-                      objectFit: "cover",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e0",
-                    }}
-                  />
-                ) : (
-                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
-                    Sem foto cadastrada
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    color: "#4a5568",
-                  }}
-                >
-                  Perfil
-                </p>
-                {historicoOrdenado[historicoOrdenado.length - 2].fotoPerfil ? (
-                  <img
-                    src={
-                      historicoOrdenado[historicoOrdenado.length - 2].fotoPerfil
-                    }
-                    alt="Perfil"
-                    style={{
-                      width: "100%",
-                      maxHeight: "250px",
-                      objectFit: "cover",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e0",
-                    }}
-                  />
-                ) : (
-                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
-                    Sem foto cadastrada
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    color: "#4a5568",
-                  }}
-                >
-                  Costas
-                </p>
-                {historicoOrdenado[historicoOrdenado.length - 2].fotoCostas ? (
-                  <img
-                    src={
-                      historicoOrdenado[historicoOrdenado.length - 2].fotoCostas
-                    }
-                    alt="Costas"
-                    style={{
-                      width: "100%",
-                      maxHeight: "250px",
-                      objectFit: "cover",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e0",
-                    }}
-                  />
-                ) : (
-                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
-                    Sem foto cadastrada
-                  </p>
-                )}
-              </div>
-            </div>
-            <p style={{ marginTop: "15px" }}>
-              Última Avaliação:{" "}
-              {formatarDataBr(
-                historicoOrdenado[historicoOrdenado.length - 1].dataAval,
-              )}
+              Área Visceral Estimada: <strong>{visceralArea} cm²</strong> |
+              Cintura: <strong>{avaliacaoMaisRecente.cintura || 0} cm</strong>
             </p>
-
-            <div
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+            <span
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: "15px",
-                textAlign: "center",
+                backgroundColor: visceralNivel >= 10 ? "#fed7d7" : "#c6f6d5",
+                color: visceralNivel >= 10 ? "#9b2c2c" : "#22543d",
+                padding: "6px 14px",
+                borderRadius: "20px",
+                fontWeight: "bold",
+                fontSize: "12px",
               }}
             >
-              <div>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    color: "#4a5568",
-                  }}
-                >
-                  Frente
-                </p>
-                {historicoOrdenado[historicoOrdenado.length - 1].fotoFrente ? (
-                  <img
-                    src={
-                      historicoOrdenado[historicoOrdenado.length - 1].fotoFrente
-                    }
-                    alt="Frente"
-                    style={{
-                      width: "100%",
-                      maxHeight: "250px",
-                      objectFit: "cover",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e0",
-                    }}
-                  />
-                ) : (
-                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
-                    Sem foto cadastrada
-                  </p>
-                )}
-              </div>
+              {visceralClassificacao}
+            </span>
+            <CardGorduraVisceral
+              nivel={visceralNivel}
+              classificacao={visceralClassificacao}
+            />
+          </div>
+        </div>
 
-              <div>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    color: "#4a5568",
-                  }}
-                >
-                  Perfil
-                </p>
-                {historicoOrdenado[historicoOrdenado.length - 1].fotoPerfil ? (
-                  <img
-                    src={
-                      historicoOrdenado[historicoOrdenado.length - 1].fotoPerfil
-                    }
-                    alt="Perfil"
-                    style={{
-                      width: "100%",
-                      maxHeight: "250px",
-                      objectFit: "cover",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e0",
-                    }}
-                  />
-                ) : (
-                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
-                    Sem foto cadastrada
-                  </p>
-                )}
-              </div>
+        {/* CARD DE SINAIS VITAIS */}
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            padding: "15px 20px",
+            borderRadius: "8px",
+            border: "1px solid #cbd5e0",
+            marginBottom: "30px",
+            display: "flex",
+            justifyContent: !isMobile ? "space-around" : "center",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "15px",
+            flexDirection: isMobile ? "column" : "row",
+          }}
+        >
+          <div>
+            <span style={{ fontSize: "13px", color: "#666", display: "block" }}>
+              Pressão Arterial (Repouso):
+            </span>
+            <strong style={{ fontSize: "18px", color: "#2d3748" }}>
+              {paAtual} mmHg
+            </strong>
+          </div>
+          <div
+            style={{
+              borderLeft: !isMobile ? "1px solid #e2e8f0" : "none",
+              paddingLeft: !isMobile ? "20px" : "0",
+            }}
+          >
+            <span style={{ fontSize: "13px", color: "#666", display: "block" }}>
+              Oximetria (SpO2):
+            </span>
+            <strong style={{ fontSize: "18px", color: "#2d3748" }}>
+              {oximetriaAtual}%
+            </strong>
+          </div>
+          <div
+            style={{
+              borderLeft: !isMobile ? "1px solid #e2e8f0" : "none",
+              paddingLeft: !isMobile ? "20px" : "0",
+            }}
+          >
+            <span style={{ fontSize: "13px", color: "#666", display: "block" }}>
+              Última Avaliação:
+            </span>
+            <strong style={{ fontSize: "18px", color: "#2d3748" }}>
+              {formatarDataBr(avaliacaoMaisRecente.dataAval)}
+            </strong>
+          </div>
+        </div>
 
-              <div>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    color: "#4a5568",
-                  }}
-                >
-                  Costas
-                </p>
-                {historicoOrdenado[historicoOrdenado.length - 1].fotoCostas ? (
-                  <img
-                    src={
-                      historicoOrdenado[historicoOrdenado.length - 1].fotoCostas
-                    }
-                    alt="Costas"
-                    style={{
-                      width: "100%",
-                      maxHeight: "250px",
-                      objectFit: "cover",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e0",
-                    }}
-                  />
-                ) : (
-                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
-                    Sem foto cadastrada
-                  </p>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <p>
-              Última Avaliação:{" "}
-              {formatarDataBr(
-                historicoOrdenado[historicoOrdenado.length - 1].dataAval,
-              )}
-            </p>
-            <div
+        {/* Tabela de Perimetria de Membros (Braços e Pernas) */}
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            padding: "20px",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+            border: "1px solid #e2e8f0",
+            marginBottom: "25px",
+          }}
+        >
+          <h3
+            style={{
+              fontSize: "16px",
+              color: "#2d3748",
+              marginBottom: "15px",
+              fontWeight: "600",
+            }}
+          >
+            Comparativo de Medidas (Braços e Pernas)
+          </h3>
+
+          <div style={{ overflowX: "auto" }}>
+            <table
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: "15px",
-                textAlign: "center",
+                width: "100%",
+                borderCollapse: "collapse",
+                textAlign: "left",
+                fontSize: "14px",
               }}
             >
-              <CardImage src={avaliacaoMaisRecente.fotoFrente} alt="Frente" label="Frente" />
-              <CardImage src={avaliacaoMaisRecente.fotoPerfil} alt="Perfil" label="Perfil" />
-              <CardImage src={avaliacaoMaisRecente.fotoCostas} alt="Costas" label="Costas" />
+              <thead>
+                <tr
+                  style={{
+                    background: "#edf2f7",
+                    borderBottom: "2px solid #cbd5e0",
+                  }}
+                >
+                  <th style={{ padding: "8px" }}>Medida (cm)</th>
+                  <th style={{ padding: "8px" }}>Primeira Avaliação</th>
+                  <th style={{ padding: "8px" }}>Última Avaliação</th>
+                  <th style={{ padding: "8px" }}>Diferença</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { label: "Braço Relax. (Dir)", dir: "bracoRelaxDir" },
+                  { label: "Braço Relax. (Esq)", dir: "bracoRelaxEsq" },
+                  { label: "Braço Contr. (Dir)", dir: "bracoContrDir" },
+                  { label: "Braço Contr. (Esq)", dir: "bracoContrEsq" },
+                  { label: "Coxa (Dir)", dir: "coxaDir" },
+                  { label: "Coxa (Esq)", dir: "coxaEsq" },
+                  { label: "Panturrilha (Dir)", dir: "panturrilhaDir" },
+                  { label: "Panturrilha (Esq)", dir: "panturrilhaEsq" },
+                ].map((item, index) => {
+                  const primeiraAval = historicoOrdenadoGeral[0] || {};
+                  const ultimaAval = avaliacaoMaisRecente || {};
+
+                  const valInicial = parseFloat(primeiraAval[item.dir]) || 0;
+                  const valAtual = parseFloat(ultimaAval[item.dir]) || 0;
+                  const dif = parseFloat((valAtual - valInicial).toFixed(1));
+
+                  return (
+                    <tr
+                      key={index}
+                      style={{ borderBottom: "1px solid #e2e8f0" }}
+                    >
+                      <td style={{ padding: "8px", fontWeight: "500" }}>
+                        {item.label}
+                      </td>
+                      <td style={{ padding: "8px" }}>
+                        {valInicial > 0 ? `${valInicial} cm` : "-"}
+                      </td>
+                      <td style={{ padding: "8px" }}>
+                        {valAtual > 0 ? `${valAtual} cm` : "-"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "8px",
+                          fontWeight: "bold",
+                          color:
+                            dif > 0
+                              ? "#2b6cb0"
+                              : dif < 0
+                                ? "#e53e3e"
+                                : "#718096",
+                        }}
+                      >
+                        {dif > 0 ? `+${dif} cm` : `${dif} cm`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* GRID DE GRÁFICOS (2 Colunas em desktop, coluna única em telas menores) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+            gap: "20px",
+            marginBottom: "30px",
+          }}
+        >
+          <div style={graphContainerStyle}>
+            <h3 style={graphTitleStyle}>Composição Corporal Atual (Siri)</h3>
+            <div style={{ maxWidth: "260px", margin: "0 auto" }}>
+              <Doughnut data={dadosRosca} />
             </div>
-          </>
-        )}
+          </div>
+
+          <div style={graphContainerStyle}>
+            <h3 style={graphTitleStyle}>Evolução de Peso e % de Gordura</h3>
+            <Line
+              data={dadosEvolucaoCorporal}
+              options={opcoesEvolucaoCorporal}
+            />
+          </div>
+
+          <div style={graphContainerStyle}>
+            <h3 style={graphTitleStyle}>Evolução de Circunferências (cm)</h3>
+            <Line
+              data={dadosEvolucaoCircunferencias}
+              options={{
+                responsive: true,
+                plugins: { legend: { position: "bottom" } },
+              }}
+            />
+          </div>
+
+          <div style={graphContainerStyle}>
+            <h3 style={graphTitleStyle}>
+              Evolução Cardiorrespiratória (VO2max)
+            </h3>
+            <Line
+              data={dadosEvolucaoVO2}
+              options={{
+                responsive: true,
+                plugins: { legend: { position: "bottom" } },
+              }}
+            />
+          </div>
+
+          <div style={graphContainerStyle}>
+            <h3 style={graphTitleStyle}>Resistência e Força Muscular</h3>
+            <Line
+              data={dadosEvolucaoForca}
+              options={{
+                responsive: true,
+                plugins: { legend: { position: "bottom" } },
+              }}
+            />
+          </div>
+
+          <div style={graphContainerStyle}>
+            <h3 style={graphTitleStyle}>
+              Evolução da Prancha Isométrica (Core)
+            </h3>
+            <Line
+              data={dadosEvolucaoPrancha}
+              options={{
+                responsive: true,
+                plugins: { legend: { position: "bottom" } },
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Seção de Comparação Visual por Fotos no Dashboard */}
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            padding: "20px",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+            border: "1px solid #e2e8f0",
+            marginBottom: "30px",
+          }}
+        >
+          <h3
+            style={{
+              fontSize: "16px",
+              color: "#2d3748",
+              marginBottom: "15px",
+              fontWeight: "600",
+            }}
+          >
+            Evolução Visual
+          </h3>
+
+          {historicoOrdenado.length > 1 ? (
+            <>
+              <p>
+                Penúltima Avaliação:{" "}
+                {formatarDataBr(
+                  historicoOrdenado[historicoOrdenado.length - 2].dataAval,
+                )}
+              </p>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: "15px",
+                  textAlign: "center",
+                }}
+              >
+                <div>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      color: "#4a5568",
+                    }}
+                  >
+                    Frente
+                  </p>
+                  {historicoOrdenado[historicoOrdenado.length - 2]
+                    .fotoFrente ? (
+                    <img
+                      src={
+                        historicoOrdenado[historicoOrdenado.length - 2]
+                          .fotoFrente
+                      }
+                      alt="Frente"
+                      style={{
+                        width: "100%",
+                        maxHeight: "350px",
+                        objectFit: "cover",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e0",
+                      }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                      Sem foto cadastrada
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      color: "#4a5568",
+                    }}
+                  >
+                    Perfil
+                  </p>
+                  {historicoOrdenado[historicoOrdenado.length - 2]
+                    .fotoPerfil ? (
+                    <img
+                      src={
+                        historicoOrdenado[historicoOrdenado.length - 2]
+                          .fotoPerfil
+                      }
+                      alt="Perfil"
+                      style={{
+                        width: "100%",
+                        maxHeight: "250px",
+                        objectFit: "cover",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e0",
+                      }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                      Sem foto cadastrada
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      color: "#4a5568",
+                    }}
+                  >
+                    Costas
+                  </p>
+                  {historicoOrdenado[historicoOrdenado.length - 2]
+                    .fotoCostas ? (
+                    <img
+                      src={
+                        historicoOrdenado[historicoOrdenado.length - 2]
+                          .fotoCostas
+                      }
+                      alt="Costas"
+                      style={{
+                        width: "100%",
+                        maxHeight: "250px",
+                        objectFit: "cover",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e0",
+                      }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                      Sem foto cadastrada
+                    </p>
+                  )}
+                </div>
+              </div>
+              <p style={{ marginTop: "15px" }}>
+                Última Avaliação:{" "}
+                {formatarDataBr(
+                  historicoOrdenado[historicoOrdenado.length - 1].dataAval,
+                )}
+              </p>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: "15px",
+                  textAlign: "center",
+                }}
+              >
+                <div>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      color: "#4a5568",
+                    }}
+                  >
+                    Frente
+                  </p>
+                  {historicoOrdenado[historicoOrdenado.length - 1]
+                    .fotoFrente ? (
+                    <img
+                      src={
+                        historicoOrdenado[historicoOrdenado.length - 1]
+                          .fotoFrente
+                      }
+                      alt="Frente"
+                      style={{
+                        width: "100%",
+                        maxHeight: "250px",
+                        objectFit: "cover",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e0",
+                      }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                      Sem foto cadastrada
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      color: "#4a5568",
+                    }}
+                  >
+                    Perfil
+                  </p>
+                  {historicoOrdenado[historicoOrdenado.length - 1]
+                    .fotoPerfil ? (
+                    <img
+                      src={
+                        historicoOrdenado[historicoOrdenado.length - 1]
+                          .fotoPerfil
+                      }
+                      alt="Perfil"
+                      style={{
+                        width: "100%",
+                        maxHeight: "250px",
+                        objectFit: "cover",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e0",
+                      }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                      Sem foto cadastrada
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      color: "#4a5568",
+                    }}
+                  >
+                    Costas
+                  </p>
+                  {historicoOrdenado[historicoOrdenado.length - 1]
+                    .fotoCostas ? (
+                    <img
+                      src={
+                        historicoOrdenado[historicoOrdenado.length - 1]
+                          .fotoCostas
+                      }
+                      alt="Costas"
+                      style={{
+                        width: "100%",
+                        maxHeight: "250px",
+                        objectFit: "cover",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e0",
+                      }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "12px", color: "#a0aec0" }}>
+                      Sem foto cadastrada
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <p>
+                Última Avaliação:{" "}
+                {formatarDataBr(
+                  historicoOrdenado[historicoOrdenado.length - 1].dataAval,
+                )}
+              </p>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: "15px",
+                  textAlign: "center",
+                }}
+              >
+                <CardImage
+                  src={avaliacaoMaisRecente.fotoFrente}
+                  alt="Frente"
+                  label="Frente"
+                />
+                <CardImage
+                  src={avaliacaoMaisRecente.fotoPerfil}
+                  alt="Perfil"
+                  label="Perfil"
+                />
+                <CardImage
+                  src={avaliacaoMaisRecente.fotoCostas}
+                  alt="Costas"
+                  label="Costas"
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
