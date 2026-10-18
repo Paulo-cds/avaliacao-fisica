@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
@@ -15,6 +16,7 @@
     "react": "^19.3.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
     "react-router": "^7.18.4",
     "react-router-dom": "^7.18.4",
     "react-scripts": "^5.0.1",

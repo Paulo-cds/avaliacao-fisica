@@ -29,6 +29,7 @@ import { Line, Doughnut } from "react-chartjs-2";
 import { getAuth } from "firebase/auth";
 import CardGorduraVisceral from "./CardGorduraVisceral";
 import CardImage from "./CardImage";
+import ComponenteDiagnosticoIA from "./ComponenteDiagnosticoIA";
 
 ChartJS.register(
   CategoryScale,
@@ -1140,6 +1141,10 @@ export default function DashboardAluno() {
             </>
           )}
         </div>
+        <ComponenteDiagnosticoIA 
+          aluno={aluno}
+          historicoOrdenadoGeral={historicoOrdenado}
+        />
       </div>
     </div>
   );
