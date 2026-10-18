@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { useMobile } from "./mobileControl";
 
 // Inicializa o Gemini com sua API Key (salva no .env como REACT_APP_GEMINI_API_KEY)
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
 
 export default function ComponenteDiagnosticoIA({
