@@ -14,7 +14,7 @@ export default function ComponenteDiagnosticoIA({
   const [diagnostico, setDiagnostico] = useState("");
   const [carregandoIA, setCarregandoIA] = useState(false);
   const isMobile = useMobile(768);
-
+    console.log('apiKey:', apiKey); // Adicione esta linha para depuração
   const gerarDiagnosticoIA = async () => {
     setCarregandoIA(true);
     try {
