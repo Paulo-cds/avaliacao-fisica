@@ -25,6 +25,7 @@ import {
 import { Line, Doughnut } from "react-chartjs-2";
 import { getAuth } from "firebase/auth";
 import CardGorduraVisceral from "./CardGorduraVisceral";
+import CardImage from "./CardImage";
 
 ChartJS.register(
   CategoryScale,
@@ -138,13 +139,19 @@ export default function DashboardAluno() {
     );
   }
 
-  const historicoOrdenado = [...historico]
-    .sort((a, b) => new Date(a.dataAval) - new Date(b.dataAval))
-    .slice(-5);
+  // 1. Array com TODAS as avaliações ordenadas por data (da mais antiga para a mais recente)
+  const historicoOrdenadoGeral = [...historico].sort(
+    (a, b) => new Date(a.dataAval) - new Date(b.dataAval),
+  );
+
+  // 2. Limita às últimas 5 avaliações para não poluir os gráficos
+  const historicoOrdenado = historicoOrdenadoGeral.slice(-5);
 
   const avaliacaoMaisRecente = [...historico].sort(
     (a, b) => new Date(a.dataAval) - new Date(b.dataAval),
   )[historico.length - 1];
+
+  const primeiraAvaliacao = historicoOrdenadoGeral[0];
 
   const pesoAtual = parseFloat(avaliacaoMaisRecente.peso) || 0;
   const gorduraAtual = parseFloat(avaliacaoMaisRecente.percentualGordura) || 0;
@@ -471,7 +478,10 @@ export default function DashboardAluno() {
           >
             {visceralClassificacao}
           </span>
-        <CardGorduraVisceral nivel={visceralNivel} classificacao={visceralClassificacao} />
+          <CardGorduraVisceral
+            nivel={visceralNivel}
+            classificacao={visceralClassificacao}
+          />
         </div>
       </div>
 
@@ -524,6 +534,97 @@ export default function DashboardAluno() {
           <strong style={{ fontSize: "18px", color: "#2d3748" }}>
             {formatarDataBr(avaliacaoMaisRecente.dataAval)}
           </strong>
+        </div>
+      </div>
+
+      {/* Tabela de Perimetria de Membros (Braços e Pernas) */}
+      <div
+        style={{
+          backgroundColor: "#ffffff",
+          padding: "20px",
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+          border: "1px solid #e2e8f0",
+          marginBottom: "25px",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "16px",
+            color: "#2d3748",
+            marginBottom: "15px",
+            fontWeight: "600",
+          }}
+        >
+          Comparativo de Medidas (Braços e Pernas)
+        </h3>
+
+        <div style={{ overflowX: "auto" }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              textAlign: "left",
+              fontSize: "14px",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  background: "#edf2f7",
+                  borderBottom: "2px solid #cbd5e0",
+                }}
+              >
+                <th style={{ padding: "8px" }}>Medida (cm)</th>
+                <th style={{ padding: "8px" }}>Primeira Avaliação</th>
+                <th style={{ padding: "8px" }}>Última Avaliação</th>
+                <th style={{ padding: "8px" }}>Diferença</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { label: "Braço Relax. (Dir)", dir: "bracoRelaxDir" },
+                { label: "Braço Relax. (Esq)", dir: "bracoRelaxEsq" },
+                { label: "Braço Contr. (Dir)", dir: "bracoContrDir" },
+                { label: "Braço Contr. (Esq)", dir: "bracoContrEsq" },
+                { label: "Coxa (Dir)", dir: "coxaDir" },
+                { label: "Coxa (Esq)", dir: "coxaEsq" },
+                { label: "Panturrilha (Dir)", dir: "panturrilhaDir" },
+                { label: "Panturrilha (Esq)", dir: "panturrilhaEsq" },
+              ].map((item, index) => {
+                const primeiraAval = historicoOrdenadoGeral[0] || {};
+                const ultimaAval = avaliacaoMaisRecente || {};
+
+                const valInicial = parseFloat(primeiraAval[item.dir]) || 0;
+                const valAtual = parseFloat(ultimaAval[item.dir]) || 0;
+                const dif = parseFloat((valAtual - valInicial).toFixed(1));
+
+                return (
+                  <tr key={index} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <td style={{ padding: "8px", fontWeight: "500" }}>
+                      {item.label}
+                    </td>
+                    <td style={{ padding: "8px" }}>
+                      {valInicial > 0 ? `${valInicial} cm` : "-"}
+                    </td>
+                    <td style={{ padding: "8px" }}>
+                      {valAtual > 0 ? `${valAtual} cm` : "-"}
+                    </td>
+                    <td
+                      style={{
+                        padding: "8px",
+                        fontWeight: "bold",
+                        color:
+                          dif > 0 ? "#2b6cb0" : dif < 0 ? "#e53e3e" : "#718096",
+                      }}
+                    >
+                      {dif > 0 ? `+${dif} cm` : `${dif} cm`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -650,7 +751,7 @@ export default function DashboardAluno() {
                     alt="Frente"
                     style={{
                       width: "100%",
-                      maxHeight: "250px",
+                      maxHeight: "350px",
                       objectFit: "cover",
                       borderRadius: "6px",
                       border: "1px solid #cbd5e0",
@@ -850,90 +951,9 @@ export default function DashboardAluno() {
                 textAlign: "center",
               }}
             >
-              <div>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    color: "#4a5568",
-                  }}
-                >
-                  Frente
-                </p>
-                {avaliacaoMaisRecente.fotoFrente ? (
-                  <img
-                    src={avaliacaoMaisRecente.fotoFrente}
-                    alt="Frente"
-                    style={{
-                      width: "100%",
-                      maxHeight: "250px",
-                      objectFit: "cover",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e0",
-                    }}
-                  />
-                ) : (
-                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
-                    Sem foto cadastrada
-                  </p>
-                )}
-              </div>
-              <div>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    color: "#4a5568",
-                  }}
-                >
-                  Perfil
-                </p>
-                {avaliacaoMaisRecente.fotoPerfil ? (
-                  <img
-                    src={avaliacaoMaisRecente.fotoPerfil}
-                    alt="Perfil"
-                    style={{
-                      width: "100%",
-                      maxHeight: "250px",
-                      objectFit: "cover",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e0",
-                    }}
-                  />
-                ) : (
-                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
-                    Sem foto cadastrada
-                  </p>
-                )}
-              </div>
-              <div>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    color: "#4a5568",
-                  }}
-                >
-                  Costas
-                </p>
-                {avaliacaoMaisRecente.fotoCostas ? (
-                  <img
-                    src={avaliacaoMaisRecente.fotoCostas}
-                    alt="Costas"
-                    style={{
-                      width: "100%",
-                      maxHeight: "250px",
-                      objectFit: "cover",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e0",
-                    }}
-                  />
-                ) : (
-                  <p style={{ fontSize: "12px", color: "#a0aec0" }}>
-                    Sem foto cadastrada
-                  </p>
-                )}
-              </div>
+              <CardImage src={avaliacaoMaisRecente.fotoFrente} alt="Frente" label="Frente" />
+              <CardImage src={avaliacaoMaisRecente.fotoPerfil} alt="Perfil" label="Perfil" />
+              <CardImage src={avaliacaoMaisRecente.fotoCostas} alt="Costas" label="Costas" />
             </div>
           </>
         )}

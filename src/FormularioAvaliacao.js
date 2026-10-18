@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { db } from "./firebase";
-import { collection, addDoc, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 
 export default function FormularioAvaliacao({
   alunoSelecionado,
@@ -14,6 +20,16 @@ export default function FormularioAvaliacao({
     cintura: "",
     abdomen: "",
     quadril: "",
+    // Membros Superiores (cm)
+    bracoRelaxDir: "",
+    bracoRelaxEsq: "",
+    bracoContrDir: "",
+    bracoContrEsq: "",
+    // Membros Inferiores (cm)
+    coxaDir: "",
+    coxaEsq: "",
+    panturrilhaDir: "",
+    panturrilhaEsq: "",
     // Dobras Cutâneas (Agora focadas nas 3 dobras do protocolo)
     triceps: "",
     suprailiaca: "",
@@ -202,8 +218,6 @@ export default function FormularioAvaliacao({
 
   const sexoAluno = alunoSelecionado?.sexo || "M";
 
- 
-
   return (
     <div
       style={{
@@ -349,12 +363,18 @@ export default function FormularioAvaliacao({
           </div>
         </div>
         <div>
-          <h4 style={sectionTitleStyle}>2. Circunferências (cm)</h4>
+          <h4 style={sectionTitleStyle}>
+            2. Circunferências / Perimetria (cm)
+          </h4>
+
+          {/* Tronco */}
+          <p style={subSectionTitleStyle}>Tronco</p>
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
               gap: "10px",
+              marginBottom: "10px",
             }}
           >
             <div>
@@ -392,6 +412,133 @@ export default function FormularioAvaliacao({
                 value={avaliacao.quadril}
                 onChange={(e) =>
                   setAvaliacao({ ...avaliacao, quadril: e.target.value })
+                }
+                style={inputStyle}
+                placeholder="cm"
+              />
+            </div>
+          </div>
+
+          {/* Braços */}
+          <p style={subSectionTitleStyle}>Braços (Direito / Esquerdo)</p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+              gap: "10px",
+              marginBottom: "10px",
+            }}
+          >
+            <div>
+              <label style={labelStyle}>Braço Rel. Dir:</label>
+              <input
+                type="number"
+                step="0.1"
+                value={avaliacao.bracoRelaxDir}
+                onChange={(e) =>
+                  setAvaliacao({ ...avaliacao, bracoRelaxDir: e.target.value })
+                }
+                style={inputStyle}
+                placeholder="cm"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Braço Rel. Esq:</label>
+              <input
+                type="number"
+                step="0.1"
+                value={avaliacao.bracoRelaxEsq}
+                onChange={(e) =>
+                  setAvaliacao({ ...avaliacao, bracoRelaxEsq: e.target.value })
+                }
+                style={inputStyle}
+                placeholder="cm"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Braço Con. Dir:</label>
+              <input
+                type="number"
+                step="0.1"
+                value={avaliacao.bracoContrDir}
+                onChange={(e) =>
+                  setAvaliacao({ ...avaliacao, bracoContrDir: e.target.value })
+                }
+                style={inputStyle}
+                placeholder="cm"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Braço Con. Esq:</label>
+              <input
+                type="number"
+                step="0.1"
+                value={avaliacao.bracoContrEsq}
+                onChange={(e) =>
+                  setAvaliacao({ ...avaliacao, bracoContrEsq: e.target.value })
+                }
+                style={inputStyle}
+                placeholder="cm"
+              />
+            </div>
+          </div>
+
+          {/* Pernas */}
+          <p style={subSectionTitleStyle}>Pernas (Direita / Esquerda)</p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+              gap: "10px",
+            }}
+          >
+            <div>
+              <label style={labelStyle}>Coxa Dir:</label>
+              <input
+                type="number"
+                step="0.1"
+                value={avaliacao.coxaDir}
+                onChange={(e) =>
+                  setAvaliacao({ ...avaliacao, coxaDir: e.target.value })
+                }
+                style={inputStyle}
+                placeholder="cm"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Coxa Esq:</label>
+              <input
+                type="number"
+                step="0.1"
+                value={avaliacao.coxaEsq}
+                onChange={(e) =>
+                  setAvaliacao({ ...avaliacao, coxaEsq: e.target.value })
+                }
+                style={inputStyle}
+                placeholder="cm"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Panturrilha Dir:</label>
+              <input
+                type="number"
+                step="0.1"
+                value={avaliacao.panturrilhaDir}
+                onChange={(e) =>
+                  setAvaliacao({ ...avaliacao, panturrilhaDir: e.target.value })
+                }
+                style={inputStyle}
+                placeholder="cm"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Panturrilha Esq:</label>
+              <input
+                type="number"
+                step="0.1"
+                value={avaliacao.panturrilhaEsq}
+                onChange={(e) =>
+                  setAvaliacao({ ...avaliacao, panturrilhaEsq: e.target.value })
                 }
                 style={inputStyle}
                 placeholder="cm"
@@ -667,4 +814,11 @@ const submitBtnStyle = {
   fontSize: "1rem",
   width: "100%",
   marginTop: "5px",
+};
+
+const subSectionTitleStyle = {
+  margin: "8px 0 4px 0",
+  fontSize: "0.85rem",
+  fontWeight: "bold",
+  color: "#2b6cb0",
 };
