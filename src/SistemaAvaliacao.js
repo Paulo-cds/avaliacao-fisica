@@ -21,6 +21,7 @@ export default function SistemaAvaliacao() {
   const [historicoAvaliacoes, setHistoricoAvaliacoes] = useState([]);
   const [ordemHistorico, setOrdemHistorico] = useState("desc");
   const [newAvaliacao, setNewAvaliacao] = useState(false);
+  const [busca, setBusca] = useState("");
 
   const [novoCliente, setNovoCliente] = useState({
     nome: "",
@@ -44,6 +45,7 @@ export default function SistemaAvaliacao() {
   const handleSalvarCliente = async (e) => {
     e.preventDefault();
     try {
+      novoCliente.whatsapp = 55 + novoCliente.whatsapp.replace(/\D/g, "");
       await addDoc(collection(db, "clientes"), {
         ...novoCliente,
         criadoEm: serverTimestamp(),
@@ -101,6 +103,31 @@ export default function SistemaAvaliacao() {
     }
   };
 
+  const excluirCliente = async ({ nome, id }) => {
+    if (
+      window.confirm(
+        `Tem certeza que deseja excluir o aluno ${nome}? Todos os dados e avaliações associadas serão perdidos.`,
+      )
+    ) {
+      try {
+        await deleteDoc(doc(db, "clientes", id));
+        alert("Cliente excluído com sucesso!");
+        carregarClientes();
+        // window.location.href = "/"; // Volta para a tela inicial
+      } catch (error) {
+        console.error("Erro ao excluir cliente:", error);
+        alert("Erro ao excluir cliente.");
+      }
+    }
+  };
+
+  const clientesFiltrados = clientes.filter((c) =>
+    c.nome?.toLowerCase().includes(busca.toLowerCase()),
+  );
+
+  // Define qual lista deve ser exibida no momento
+  const listaParaExibir = busca.trim() !== "" ? clientesFiltrados : clientes;
+
   return (
     <div
       style={{
@@ -152,57 +179,133 @@ export default function SistemaAvaliacao() {
           <h2 style={{ fontSize: "1.2rem", color: "#2d3748" }}>
             Lista de Alunos
           </h2>
+          <div style={{ marginBottom: "20px" }}>
+            <input
+              type="text"
+              placeholder="🔍 Pesquisar aluno pelo nome..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              style={{
+                width: "100%",
+                maxWidth: "400px",
+                padding: "12px 15px",
+                fontSize: "15px",
+                borderRadius: "8px",
+                border: "1px solid #cbd5e0",
+                boxSizing: "border-box",
+                backgroundColor: "#fff",
+                outline: "none",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              }}
+            />
+          </div>
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {clientes.map((c) => (
-              <li
-                key={c.id}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  sm: { flexDirection: "row" },
-                  justifyContent: "space-between",
-                  gap: "10px",
-                  padding: "12px",
-                  background: "#fff",
-                  marginBottom: "10px",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                }}
-              >
-                <div>
-                  <strong style={{ fontSize: "1.05rem", color: "#2b6cb0" }}>
-                    {c.nome}
-                  </strong>
-                  <span
-                    style={{
-                      color: "#666",
-                      fontSize: "0.9rem",
-                      display: "block",
-                    }}
-                  >
-                    Sexo: {c.sexo} | Nasc: {formatarDataBr(c.dataNasc)}
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    setAlunoSelecionado(c);
-                    carregarHistorico(c.id);
-                  }}
+            {listaParaExibir.length > 0 ? (
+              listaParaExibir.map((c) => (
+                <li
+                  key={c.id}
                   style={{
-                    background: "#3182ce",
-                    color: "#fff",
-                    border: "none",
-                    padding: "10px",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                    width: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    sm: { flexDirection: "row" },
+                    justifyContent: "space-between",
+                    gap: "10px",
+                    padding: "12px",
+                    background: "#fff",
+                    marginBottom: "10px",
+                    border: "1px solid #ddd",
+                    borderRadius: "8px",
                   }}
                 >
-                  Ver Histórico / Avaliar
-                </button>
+                  <div>
+                    <strong style={{ fontSize: "1.05rem", color: "#2b6cb0" }}>
+                      {c.nome}
+                    </strong>
+                    <span
+                      style={{
+                        color: "#666",
+                        fontSize: "0.9rem",
+                        display: "block",
+                      }}
+                    >
+                      Sexo: {c.sexo} | Nasc: {formatarDataBr(c.dataNasc)}
+                    </span>
+                    <span
+                      style={{
+                        color: "#666",
+                        fontSize: "0.9rem",
+                        display: "block",
+                      }}
+                    >
+                      WhatsApp: {c.whatsapp || "N/A"}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    {/* Botão de Excluir */}
+                    <button
+                      onClick={() => excluirCliente({ nome: c.nome, id: c.id })}
+                      style={{
+                        background: "#e53e3e",
+                        color: "#fff",
+                        border: "none",
+                        padding: "6px 12px",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      Excluir
+                    </button>
+                    <Link
+                      to={`/editar-cliente/${c.id}`}
+                      style={{
+                        background: "#d69e2e",
+                        color: "#fff",
+                        padding: "6px 12px",
+                        borderRadius: "4px",
+                        textDecoration: "none",
+                        fontWeight: "bold",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      Editar
+                    </Link>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setAlunoSelecionado(c);
+                      carregarHistorico(c.id);
+                    }}
+                    style={{
+                      background: "#3182ce",
+                      color: "#fff",
+                      border: "none",
+                      padding: "10px",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      width: "100%",
+                    }}
+                  >
+                    Ver Histórico / Avaliar
+                  </button>
+                </li>
+              ))
+            ) : (
+              <li
+                style={{
+                  textAlign: "center",
+                  padding: "20px",
+                  color: "#666",
+                  background: "#fff",
+                  borderRadius: "8px",
+                  border: "1px solid #ddd",
+                }}
+              >
+                Nenhum aluno encontrado para "{busca}".
               </li>
-            ))}
+            )}
           </ul>
         </div>
       )}
@@ -245,6 +348,30 @@ export default function SistemaAvaliacao() {
             }
             required
             style={inputStyle}
+          />
+
+          <label
+            style={{
+              display: "block",
+              fontWeight: "bold",
+              marginBottom: "5px",
+            }}
+          >
+            WhatsApp (com DDD):
+          </label>
+          <input
+            type="text"
+            placeholder="Ex: 11999999999"
+            value={novoCliente.whatsapp}
+            onChange={(e) =>
+              setNovoCliente({ ...novoCliente, whatsapp: e.target.value })
+            }
+            style={{
+              width: "100%",
+              padding: "8px",
+              borderRadius: "4px",
+              border: "1px solid #cbd5e0",
+            }}
           />
 
           <button type="submit" style={submitBtnStyle}>
@@ -295,8 +422,7 @@ export default function SistemaAvaliacao() {
               >
                 Nova Avaliação
               </button>
-            ) :
-            (
+            ) : (
               <button
                 onClick={() => setNewAvaliacao(!newAvaliacao)}
                 style={btnStyle(newAvaliacao)}

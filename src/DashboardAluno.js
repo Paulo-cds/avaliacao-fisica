@@ -93,57 +93,68 @@ export default function DashboardAluno() {
   const dashboardRef = useRef(null);
 
   const gerarPDF = async () => {
-    console.log("chamou...");
     const element = dashboardRef.current;
-    console.log("elemento do dashboardRef:", element);
     if (!element) return;
 
     try {
-      // 1. Renderiza o container do React em um Canvas HTML5 de alta resolução
+      // 1. Força temporariamente o container a ter uma largura padrão de A4 desktop (ex: 1100px)
+      // para garantir que os elementos fiquem organizados e não comprimidos como no celular.
+      const larguraOriginal = element.style.width;
+      element.style.width = "1100px";
+      element.style.maxWidth = "none";
+
+      // 2. Renderiza o canvas em alta qualidade
       const canvas = await html2canvas(element, {
-        scale: 2, // Garante nitidez do texto e dos gráficos
-        useCORS: true, // Permite carregar imagens de origens externas/Base64
+        scale: 2,
+        useCORS: true,
         allowTaint: true,
         logging: false,
       });
 
-      // 2. Converte o canvas para imagem JPEG de qualidade
+      // Restaura a largura original do layout na tela do usuário
+      element.style.width = larguraOriginal;
+      element.style.maxWidth = "100%";
+
       const imgData = canvas.toDataURL("image/jpeg", 0.98);
 
-      // 3. Configura a página do PDF (Formato A4 em milímetros)
+      // 3. Configura o jsPDF no formato A4 (Retrato)
       const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const pdfWidth = pdf.internal.pageSize.getWidth(); // Largura total da folha A4 (~210mm)
+      const pdfHeight = pdf.internal.pageSize.getHeight(); // Altura total da folha A4 (~297mm)
 
-      // Calcula a proporção para caber perfeitamente no A4
+      // Calcula a altura proporcional da imagem com base na largura exata da página A4
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
 
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 10; // Margem superior
-
-      const calculatedWidth = imgWidth * ratio;
+      // Faz a imagem ocupar toda a largura da página (com margem mínima opcional, aqui zerada nas laterais para aproveitar tudo)
+      const ratio = pdfWidth / imgWidth;
       const calculatedHeight = imgHeight * ratio;
 
-      // 4. Adiciona a imagem renderizada ao arquivo PDF
-      pdf.addImage(
-        imgData,
-        "JPEG",
-        imgX,
-        imgY,
-        calculatedWidth,
-        calculatedHeight,
-      );
+      let heightLeft = calculatedHeight;
+      let position = 0;
 
-      // 5. Baixa o documento com o nome do aluno
+      // 4. Adiciona a imagem ao PDF (suportando páginas múltiplas se o relatório for longo)
+      pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, calculatedHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - calculatedHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, calculatedHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      // 5. Salva o arquivo final
       const nomeFormatado = aluno?.nome?.replace(/\s+/g, "_") || "Aluno";
       pdf.save(`Avaliacao_Fisica_${nomeFormatado}.pdf`);
     } catch (error) {
+      // Garante que a largura volte ao normal mesmo se ocorrer algum erro
+      if (element) {
+        element.style.width = "1000px";
+        element.style.maxWidth = "100%";
+      }
       console.error("Erro ao gerar PDF:", error);
-      alert(
-        "Houve um erro ao tentar gerar o PDF. Verifique se os gráficos e imagens foram totalmente carregados.",
-      );
+      alert("Houve um erro ao tentar gerar o PDF.");
     }
   };
 
@@ -442,7 +453,11 @@ export default function DashboardAluno() {
           {/* Botão de Envio Direto via WhatsApp */}
           {auth && auth._currentUser && (
             <a
-              href={`https://api.whatsapp.com/send?text=${mensagemWhatsApp}`}
+              href={
+                aluno.whatsapp
+                  ? `https://api.whatsapp.com/send?phone=55${aluno.whatsapp}&text=${mensagemWhatsApp}`
+                  : `https://api.whatsapp.com/send?text=${mensagemWhatsApp}`
+              }
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -1140,7 +1155,7 @@ export default function DashboardAluno() {
             </>
           )}
         </div>
-        <ComponenteDiagnosticoIA 
+        <ComponenteDiagnosticoIA
           aluno={aluno}
           historicoOrdenadoGeral={historicoOrdenado}
         />

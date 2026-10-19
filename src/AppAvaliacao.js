@@ -7,7 +7,8 @@ import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import Private from "./Private";
 import Login from "./Login";
 import EditarAvaliacao from "./EditarAvaliacao";
-//cod implantação - AKfycbzNetCzswFf7KGjy8m08ADZVagyi7Q-jK3goRDRRQIUYOJhk9MIHXke_28NL4wkIPhI
+import EditClient from "./EditClient";
+
 const AppAvaliacao = () => {
   const [usuario, setUsuario] = useState(null);
   const auth = getAuth();
@@ -93,6 +94,15 @@ const AppAvaliacao = () => {
             element={
               <Private>
                 <EditarAvaliacao />
+              </Private>
+            }
+          />
+
+           <Route
+            path="/editar-cliente/:id"
+            element={
+              <Private>
+                <EditClient />
               </Private>
             }
           />
